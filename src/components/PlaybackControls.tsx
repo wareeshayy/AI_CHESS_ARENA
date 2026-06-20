@@ -12,6 +12,7 @@ interface PlaybackControlsProps {
   onFlip: () => void
   onReset: () => void
   onFullReplay: () => void
+  compact?: boolean
 }
 
 export default function PlaybackControls({
@@ -26,10 +27,11 @@ export default function PlaybackControls({
   onFlip,
   onReset,
   onFullReplay,
+  compact = false,
 }: PlaybackControlsProps) {
   return (
-    <div className="border-t border-[#333] p-2 space-y-2">
-      {totalMoves > 0 && (
+    <div className={`border-t border-[#403d39] shrink-0 ${compact ? "p-1.5 space-y-1" : "p-2 space-y-2"}`}>
+      {!compact && totalMoves > 0 && (
         <button
           onClick={onFullReplay}
           disabled={isPlaying}
@@ -38,7 +40,7 @@ export default function PlaybackControls({
           <span>▶</span> Replay Game
         </button>
       )}
-      <div className="flex items-center justify-center gap-1">
+      <div className="flex items-center justify-center gap-0.5">
         <ControlBtn onClick={onFirst} title="First move" disabled={currentMoveIndex < 0}>
           ⏮
         </ControlBtn>
@@ -55,13 +57,20 @@ export default function PlaybackControls({
           ⏭
         </ControlBtn>
       </div>
-      <div className="flex items-center justify-center gap-2">
-        <SmallBtn onClick={onFlip} title="Flip board">⇅</SmallBtn>
-        <SmallBtn onClick={onReset} title="New game">↻</SmallBtn>
-        <span className="text-[10px] text-[#666] ml-2">
-          {currentMoveIndex + 1} / {totalMoves}
-        </span>
-      </div>
+      {!compact && (
+        <div className="flex items-center justify-center gap-2">
+          <SmallBtn onClick={onFlip} title="Flip board">⇅</SmallBtn>
+          <SmallBtn onClick={onReset} title="New game">↻</SmallBtn>
+          <span className="text-[10px] text-[#666] ml-2">
+            {currentMoveIndex + 1} / {totalMoves}
+          </span>
+        </div>
+      )}
+      {compact && (
+        <div className="text-center text-[10px] text-[#666] tabular-nums">
+          {Math.max(0, currentMoveIndex + 1)} / {totalMoves}
+        </div>
+      )}
     </div>
   )
 }

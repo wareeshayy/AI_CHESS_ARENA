@@ -146,7 +146,7 @@ export default function ChessBoardPanel({
   const evalForBar = playerColor === "w" ? evaluation : -evaluation
 
   return (
-    <div className="flex items-stretch w-full max-w-[min(100vw-2rem,640px)]">
+    <div className="flex items-stretch w-full h-full max-w-full max-h-full overflow-hidden">
       <EvalBar
         evaluation={evalForBar}
         orientation={orientation}
@@ -155,7 +155,7 @@ export default function ChessBoardPanel({
         borderColor={styles.boardBorder}
       />
 
-      <div className="relative flex-1 aspect-square">
+      <div className="relative flex-1 min-h-0 min-w-0 h-full w-full overflow-hidden">
         <Chessboard
           options={{
             position: positionFen,
@@ -177,7 +177,7 @@ export default function ChessBoardPanel({
             lightSquareNotationStyle: styles.notationLight,
             alphaNotationStyle: { ...styles.notationLight, ...styles.notationAlpha },
             numericNotationStyle: { ...styles.notationLight, ...styles.notationNumeric },
-            boardStyle: styles.boardFrameStyle,
+            boardStyle: { ...styles.boardFrameStyle, width: "100%", height: "100%" },
           }}
         />
 

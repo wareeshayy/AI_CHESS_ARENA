@@ -1,5 +1,5 @@
-import ChessArena from "@/components/ChessArena"
+import HomeLobby from "@/components/HomeLobby"
 
 export default function Home() {
-  return <ChessArena />
+  return <HomeLobby />
 }

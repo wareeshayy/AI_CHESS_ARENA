@@ -4,9 +4,9 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import { Chess } from "chess.js"
 import ChessBoardPanel from "./ChessBoardPanel"
 import CoachPanel, { type CoachMessage } from "./CoachPanel"
-import BoardThemePicker from "./BoardThemePicker"
+import AppNavSidebar from "./AppNavSidebar"
+import BoardStage from "./BoardStage"
 import PlayerBar from "./PlayerBar"
-import { CapturedSideBySide } from "./ChessPieces"
 import { useCoachSpeech } from "@/hooks/useCoachSpeech"
 import { useBoardTheme } from "@/hooks/useBoardTheme"
 import {
@@ -25,14 +25,6 @@ import {
   formatAdvantage,
 } from "@/lib/chess/captured"
 import type { Difficulty, GameState, Personality } from "@/lib/types/game"
-
-const DIFFICULTIES: Difficulty[] = ["beginner", "intermediate", "advanced"]
-const PERSONALITIES: { id: Personality; label: string }[] = [
-  { id: "friendly_coach", label: "Friendly Coach" },
-  { id: "grandmaster", label: "Grandmaster" },
-  { id: "aggressive_rival", label: "Aggressive Rival" },
-  { id: "casual_opponent", label: "Casual Opponent" },
-]
 
 const COACH_RATINGS: Record<Personality, number> = {
   friendly_coach: 400,
@@ -441,94 +433,25 @@ export default function ChessArena() {
   const aiAdv = formatAdvantage(materialAdvantage(captured, aiColor))
 
   return (
-    <div className="min-h-screen bg-[#312e2b] text-white">
-      {/* Top nav — Chess.com style */}
-      <header className="bg-[#262421] border-b border-[#403d39] px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-[#81b64c] text-xl font-bold">♞</span>
-          <span className="font-bold text-[#ebebeb]">AI Chess Arena</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={settings.difficulty}
-            onChange={(e) => setSettings((s) => ({ ...s, difficulty: e.target.value as Difficulty }))}
-            className="bg-[#403d39] border border-[#5a5652] rounded px-2 py-1.5 text-xs text-[#ebebeb]"
-          >
-            {DIFFICULTIES.map((d) => (
-              <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
-            ))}
-          </select>
-          <select
-            value={settings.personality}
-            onChange={(e) => setSettings((s) => ({ ...s, personality: e.target.value as Personality }))}
-            className="bg-[#403d39] border border-[#5a5652] rounded px-2 py-1.5 text-xs text-[#ebebeb]"
-          >
-            {PERSONALITIES.map((p) => (
-              <option key={p.id} value={p.id}>{p.label}</option>
-            ))}
-          </select>
-          <select
-            value={settings.playerColor}
-            onChange={(e) => setSettings((s) => ({ ...s, playerColor: e.target.value as "w" | "b" }))}
-            className="bg-[#403d39] border border-[#5a5652] rounded px-2 py-1.5 text-xs text-[#ebebeb]"
-          >
-            <option value="w">Play as White</option>
-            <option value="b">Play as Black</option>
-          </select>
-          <button
-            onClick={startGame}
-            disabled={loading || aiThinking}
-            className="px-4 py-1.5 bg-[#81b64c] hover:bg-[#9bc55c] disabled:opacity-50 rounded text-xs font-bold text-[#262421] transition-colors"
-          >
-            {loading ? "Loading..." : "New Game"}
-          </button>
-        </div>
-      </header>
+    <div className="h-screen overflow-hidden bg-[#312e2b] text-white flex">
+      <AppNavSidebar active="play" />
 
-      {gameOverMessage && (
-        <div className="bg-[#81b64c]/20 border-b border-[#81b64c]/30 px-4 py-2 text-center text-sm font-semibold">
-          {gameOverMessage}
-        </div>
-      )}
-
-      {/* Main play area — Chess.com layout */}
-      <div className="flex flex-col lg:flex-row gap-0 lg:gap-4 p-3 lg:p-4 max-w-[1200px] mx-auto">
-        {/* Board column */}
-        <div className="flex-1 flex flex-col gap-1 min-w-0">
+      <div className="flex-1 min-w-0 min-h-0 flex">
+        {/* Board column — maximum breathing room */}
+        <div className="flex-1 min-w-0 min-h-0 flex flex-col px-2 py-1 overflow-hidden">
           <PlayerBar
+            compact
             name={topPlayer.name}
             color={topPlayer.color}
             isActive={game ? new Chess(fen === "start" ? undefined : fen).turn() === topPlayer.color : false}
             isThinking={topPlayer.isAI && aiThinking}
-            rating={topPlayer.isAI ? 1800 : undefined}
+            rating={topPlayer.isAI ? COACH_RATINGS[game?.personality ?? settings.personality] : undefined}
             captured={topPlayer.isAI ? aiCaptured : playerCaptured}
             capturedPieceColor={topPlayer.isAI ? playerColor : aiColor}
             materialAdvantage={topPlayer.isAI ? aiAdv : playerAdv}
           />
 
-          {/* Captured pieces — side by side */}
-          {game && (
-            <CapturedSideBySide
-              playerCaptured={playerCaptured}
-              aiCaptured={aiCaptured}
-              playerColor={playerColor}
-              aiColor={aiColor}
-              playerAdvantage={playerAdv}
-              aiAdvantage={aiAdv}
-              playerName="You"
-              aiName={aiName}
-            />
-          )}
-
-          <div className="relative">
-            {loading && (
-              <div className="absolute inset-0 z-20 bg-[#312e2b]/80 flex items-center justify-center rounded">
-                <div className="text-[#81b64c] animate-pulse font-semibold">Setting up game...</div>
-              </div>
-            )}
-            <div className="mb-2">
-              <BoardThemePicker value={boardTheme} onChange={setBoardTheme} />
-            </div>
+          <BoardStage loading={loading}>
             <ChessBoardPanel
               fen={fen}
               orientation={orientation}
@@ -540,9 +463,10 @@ export default function ChessArena() {
               evaluation={currentEval}
               moveQuality={lastMoveQuality}
             />
-          </div>
+          </BoardStage>
 
           <PlayerBar
+            compact
             name={bottomPlayer.name}
             color={bottomPlayer.color}
             isActive={game ? new Chess(fen === "start" ? undefined : fen).turn() === bottomPlayer.color : false}
@@ -552,42 +476,10 @@ export default function ChessArena() {
             capturedPieceColor={bottomPlayer.isAI ? playerColor : aiColor}
             materialAdvantage={bottomPlayer.isAI ? aiAdv : playerAdv}
           />
-
-          {game && game.moves.length > 0 && (
-            <button
-              onClick={startFullReplay}
-              disabled={isPlaying}
-              className="mt-2 w-full py-2.5 bg-[#b58863] hover:bg-[#c99870] disabled:opacity-50 rounded text-sm font-bold text-[#262421] transition-colors flex items-center justify-center gap-2 border border-[#8b6914]/40"
-            >
-              {isPlaying ? "⏸ Replaying..." : "▶ Review / Replay Game"}
-            </button>
-          )}
-
-          {!isLive && game && game.moves.length > 0 && (
-            <button
-              onClick={() => {
-              if (!game) return
-              setViewIndex(game.moves.length - 1)
-              setFen(game.fen)
-              const last = game.moves.at(-1)
-              if (last) setLastMove({ from: last.uci.slice(0, 2), to: last.uci.slice(2, 4) })
-            }}
-              className="mt-2 w-full py-2 bg-[#81b64c] hover:bg-[#9bc55c] rounded text-sm font-bold text-[#262421] transition-colors"
-            >
-              Back to live game
-            </button>
-          )}
-
-          {review && (
-            <div className="mt-3 bg-[#262421] rounded-lg p-4 text-sm text-[#ccc] border border-[#403d39]">
-              <h3 className="text-white font-semibold mb-2">Post-Game Review</h3>
-              <div className="whitespace-pre-wrap">{review}</div>
-            </div>
-          )}
         </div>
 
-        {/* Coach panel — Play Coach */}
-        <div className="w-full lg:w-[380px] h-[480px] lg:h-[720px] shrink-0 mt-3 lg:mt-0">
+        {/* Right panel — all options stacked vertically */}
+        <aside className="w-[min(300px,30vw)] shrink-0 min-h-0 border-l border-[#403d39]">
           <CoachPanel
             coachName={coachName}
             coachRating={COACH_RATINGS[personality]}
@@ -616,8 +508,21 @@ export default function ChessArena() {
             onLast={() => navigateMove((game?.moves.length ?? 1) - 1)}
             onFlip={() => setOrientation((o) => (o === "white" ? "black" : "white"))}
             onFullReplay={startFullReplay}
+            onNewGame={startGame}
+            newGameLoading={loading || aiThinking}
+            gameOverMessage={gameOverMessage}
+            settings={{
+              difficulty: settings.difficulty,
+              personality: settings.personality,
+              playerColor: settings.playerColor,
+              boardTheme,
+              onDifficultyChange: (d) => setSettings((s) => ({ ...s, difficulty: d })),
+              onPersonalityChange: (p) => setSettings((s) => ({ ...s, personality: p })),
+              onPlayerColorChange: (c) => setSettings((s) => ({ ...s, playerColor: c })),
+              onBoardThemeChange: setBoardTheme,
+            }}
           />
-        </div>
+        </aside>
       </div>
     </div>
   )

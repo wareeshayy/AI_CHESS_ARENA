@@ -1,9 +1,12 @@
 "use client"
 
-import { useRef, useEffect, useState } from "react"
+import { useRef, useEffect, useState, type ReactNode } from "react"
 import MoveList from "./MoveList"
 import PlaybackControls from "./PlaybackControls"
+import GameSettingsAccordion from "./GameSettingsAccordion"
 import type { CoachSentiment, MoveQuality } from "@/lib/ai/coach"
+import type { BoardThemeId } from "@/lib/chess/board-themes"
+import type { Difficulty, Personality } from "@/lib/types/game"
 import { formatEvalScore } from "./EvalBar"
 
 export interface CoachMessage {
@@ -40,6 +43,19 @@ interface CoachPanelProps {
   onLast: () => void
   onFlip: () => void
   onFullReplay: () => void
+  onNewGame?: () => void
+  newGameLoading?: boolean
+  gameOverMessage?: string | null
+  settings?: {
+    difficulty: Difficulty
+    personality: Personality
+    playerColor: "w" | "b"
+    boardTheme: BoardThemeId
+    onDifficultyChange: (d: Difficulty) => void
+    onPersonalityChange: (p: Personality) => void
+    onPlayerColorChange: (c: "w" | "b") => void
+    onBoardThemeChange: (t: BoardThemeId) => void
+  }
 }
 
 export default function CoachPanel({
@@ -66,6 +82,10 @@ export default function CoachPanel({
   onLast,
   onFlip,
   onFullReplay,
+  onNewGame,
+  newGameLoading = false,
+  gameOverMessage,
+  settings,
 }: CoachPanelProps) {
   const chatEndRef = useRef<HTMLDivElement>(null)
   const [chatInput, setChatInput] = useState("")
@@ -82,33 +102,52 @@ export default function CoachPanel({
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#262421] text-[#ebebeb] rounded overflow-hidden border border-[#403d39]">
-      {/* Header — Play Coach */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#403d39] bg-[#262421]">
-        <h2 className="text-base font-bold text-white tracking-tight">Game Review</h2>
+    <div className="flex flex-col h-full bg-[#262421] text-[#ebebeb] overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#403d39] shrink-0">
+        <h2 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+          <span className="text-base">🤖</span> Play Coach
+        </h2>
         <button
           onClick={onToggleSpeech}
           title={speechEnabled ? "Mute coach voice" : "Enable coach voice"}
-          className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+          className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
             speechEnabled
               ? "bg-[#403d39] text-[#81b64c] hover:bg-[#4a4744]"
               : "bg-[#403d39] text-[#666] hover:bg-[#4a4744]"
           }`}
         >
           {speechEnabled ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
             </svg>
           ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
             </svg>
           )}
         </button>
       </div>
 
-      {/* Coach avatar + messages */}
-      <div className="flex-1 overflow-y-auto min-h-0 px-3 py-3 space-y-4">
+      {gameOverMessage && (
+        <div className="shrink-0 bg-[#81b64c]/20 border-b border-[#81b64c]/30 px-3 py-1.5 text-center text-[11px] font-semibold text-[#81b64c]">
+          {gameOverMessage}
+        </div>
+      )}
+
+      {settings && (
+        <GameSettingsAccordion
+          difficulty={settings.difficulty}
+          personality={settings.personality}
+          playerColor={settings.playerColor}
+          boardTheme={settings.boardTheme}
+          onDifficultyChange={settings.onDifficultyChange}
+          onPersonalityChange={settings.onPersonalityChange}
+          onPlayerColorChange={settings.onPlayerColorChange}
+          onBoardThemeChange={settings.onBoardThemeChange}
+        />
+      )}
+
+      <div className="flex-1 overflow-y-auto min-h-0 px-3 py-2 space-y-3 scrollbar-thin">
         {messages.length === 0 && !isThinking && (
           <CoachBubble
             name={coachName}
@@ -132,7 +171,7 @@ export default function CoachPanel({
             />
           ) : (
             <div key={i} className="flex justify-end">
-              <div className="bg-[#369] text-white text-sm rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[85%]">
+              <div className="bg-[#369] text-white text-sm rounded-2xl rounded-tr-sm px-3 py-2 max-w-[85%]">
                 {msg.content}
               </div>
             </div>
@@ -140,7 +179,7 @@ export default function CoachPanel({
         )}
 
         {isThinking && (
-          <div className="flex items-center gap-2 pl-14">
+          <div className="flex items-center gap-2 pl-12">
             <div className="flex gap-1">
               <span className="w-2 h-2 bg-[#666] rounded-full animate-bounce [animation-delay:0ms]" />
               <span className="w-2 h-2 bg-[#666] rounded-full animate-bounce [animation-delay:150ms]" />
@@ -149,16 +188,36 @@ export default function CoachPanel({
           </div>
         )}
         {chatLoading && (
-          <div className="flex items-center gap-2 pl-14 text-xs text-[#888]">
-            Coach is thinking...
-          </div>
+          <div className="flex items-center gap-2 pl-12 text-xs text-[#888]">Coach is thinking...</div>
         )}
         <div ref={chatEndRef} />
       </div>
 
-      {/* AI quick actions (Groq) */}
+      <div className="shrink-0 px-3 py-2 border-t border-[#403d39] flex items-center justify-around bg-[#2a2826]">
+        <ToolbarBtn onClick={onHint} title="Hint" label="Hint">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z" />
+          </svg>
+        </ToolbarBtn>
+        <ToolbarBtn onClick={onFlip} title="Flip board" label="Flip">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6zM6 6h12v2H6V6z" />
+          </svg>
+        </ToolbarBtn>
+        <ToolbarBtn onClick={onFullReplay} title="Replay" label="Replay">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" />
+          </svg>
+        </ToolbarBtn>
+        <ToolbarBtn onClick={onResign} title="Resign" label="Resign">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z" />
+          </svg>
+        </ToolbarBtn>
+      </div>
+
       {onExplain && (
-        <div className="px-3 py-2 border-t border-[#403d39] flex flex-wrap gap-1.5 shrink-0">
+        <div className="px-3 py-1.5 border-t border-[#403d39] flex flex-wrap gap-1 shrink-0">
           {(
             [
               ["position", "Explain position"],
@@ -171,7 +230,7 @@ export default function CoachPanel({
               type="button"
               disabled={chatLoading}
               onClick={() => onExplain(focus)}
-              className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[#403d39] hover:bg-[#4a4744] text-[#ccc] hover:text-white disabled:opacity-50 transition-colors"
+              className="text-[10px] font-semibold px-2 py-1 rounded-full bg-[#403d39] hover:bg-[#4a4744] text-[#ccc] hover:text-white disabled:opacity-50 transition-colors"
             >
               {label}
             </button>
@@ -179,9 +238,8 @@ export default function CoachPanel({
         </div>
       )}
 
-      {/* Ask coach chat */}
       {onAskCoach && (
-        <div className="px-3 py-2 border-t border-[#403d39] flex gap-2 shrink-0">
+        <div className="px-3 py-1.5 border-t border-[#403d39] flex gap-2 shrink-0">
           <input
             type="text"
             value={chatInput}
@@ -189,21 +247,20 @@ export default function CoachPanel({
             onKeyDown={(e) => e.key === "Enter" && submitChat()}
             placeholder="Ask your coach..."
             disabled={chatLoading}
-            className="flex-1 bg-[#403d39] border border-[#5a5652] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#777] focus:outline-none focus:border-[#81b64c]"
+            className="flex-1 bg-[#403d39] border border-[#5a5652] rounded-lg px-2 py-1.5 text-xs text-white placeholder:text-[#777] focus:outline-none focus:border-[#81b64c]"
           />
           <button
             type="button"
             onClick={submitChat}
             disabled={chatLoading || !chatInput.trim()}
-            className="px-3 py-2 bg-[#81b64c] hover:bg-[#9bc55c] disabled:opacity-50 rounded-lg text-[#262421] font-bold text-sm"
+            className="px-2.5 py-1.5 bg-[#81b64c] hover:bg-[#9bc55c] disabled:opacity-50 rounded-lg text-[#262421] font-bold text-xs"
           >
             Ask
           </button>
         </div>
       )}
 
-      {/* Move list */}
-      <div className="border-t border-[#403d39] max-h-[180px] flex flex-col min-h-0 shrink-0">
+      <div className="border-t border-[#403d39] max-h-[100px] flex flex-col min-h-0 shrink-0">
         <MoveList
           moves={moves}
           currentMoveIndex={currentMoveIndex}
@@ -212,7 +269,6 @@ export default function CoachPanel({
         />
       </div>
 
-      {/* Playback */}
       <PlaybackControls
         currentMoveIndex={currentMoveIndex}
         totalMoves={moves.length}
@@ -225,26 +281,21 @@ export default function CoachPanel({
         onFlip={onFlip}
         onReset={onResign}
         onFullReplay={onFullReplay}
+        compact
       />
 
-      {/* Action buttons — Chess.com style */}
-      <div className="flex items-center justify-center gap-3 px-4 py-3 border-t border-[#403d39] bg-[#262421]">
-        <ActionBtn onClick={onResign} title="Resign" label="Resign">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z" />
-          </svg>
-        </ActionBtn>
-        <ActionBtn onClick={onHint} title="Get a hint" label="Hint" primary>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z" />
-          </svg>
-        </ActionBtn>
-        <ActionBtn onClick={onFullReplay} title="Replay game" label="Replay">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" />
-          </svg>
-        </ActionBtn>
-      </div>
+      {onNewGame && (
+        <div className="shrink-0 p-3 border-t border-[#403d39] bg-[#262421]">
+          <button
+            type="button"
+            onClick={onNewGame}
+            disabled={newGameLoading}
+            className="w-full py-3.5 bg-[#81b64c] hover:bg-[#9bc55c] disabled:opacity-50 rounded-lg font-bold text-[#262421] text-sm transition-colors"
+          >
+            {newGameLoading ? "Starting..." : "New Game"}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -269,32 +320,25 @@ function CoachBubble({
   const showHeader = moveSan && quality && quality !== "good"
 
   return (
-    <div className="flex gap-3 items-start">
-      <div className="shrink-0 w-11 h-11 rounded-full bg-[#403d39] border-2 border-[#5a5652] flex items-center justify-center">
-        <span className="text-2xl">🧔</span>
+    <div className="flex gap-2 items-start">
+      <div className="shrink-0 w-9 h-9 rounded-full bg-[#403d39] border-2 border-[#5a5652] flex items-center justify-center">
+        <span className="text-lg">🧔</span>
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-1.5 mb-1.5">
-          <span className="text-sm font-bold text-white">{name}</span>
-          <span className="text-xs text-[#999]">({rating})</span>
+        <div className="flex items-baseline gap-1 mb-1">
+          <span className="text-xs font-bold text-white">{name}</span>
+          <span className="text-[10px] text-[#999]">({rating})</span>
         </div>
 
-        <div className="bg-white text-[#262421] text-sm leading-relaxed rounded-lg rounded-tl-sm px-4 py-3 shadow-sm">
+        <div className="bg-white text-[#262421] text-xs leading-relaxed rounded-lg rounded-tl-sm px-3 py-2 shadow-sm">
           {showHeader && (
-            <div className="flex items-center gap-2 mb-1.5 pb-1.5 border-b border-[#e0e0e0]">
-              <span className="font-bold">
+            <div className="flex items-center gap-2 mb-1 pb-1 border-b border-[#e0e0e0]">
+              <span className="font-bold text-[11px]">
                 {moveSan} is {quality === "excellent" ? "excellent" : quality}
               </span>
-              {quality === "excellent" && (
-                <span className="w-5 h-5 rounded-full bg-[#81b64c] flex items-center justify-center">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="white">
-                    <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
-                  </svg>
-                </span>
-              )}
               {evalScore !== undefined && (
-                <span className="text-[#81b64c] text-xs font-bold ml-auto tabular-nums">
+                <span className="text-[#81b64c] text-[10px] font-bold ml-auto tabular-nums">
                   {formatEvalScore(evalScore)}
                 </span>
               )}
@@ -307,31 +351,25 @@ function CoachBubble({
   )
 }
 
-function ActionBtn({
+function ToolbarBtn({
   children,
   onClick,
   title,
   label,
-  primary,
 }: {
-  children: React.ReactNode
+  children: ReactNode
   onClick: () => void
   title: string
   label: string
-  primary?: boolean
 }) {
   return (
     <button
       onClick={onClick}
       title={title}
-      className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
-        primary
-          ? "bg-[#403d39] hover:bg-[#4a4744] text-[#81b64c]"
-          : "bg-[#403d39] hover:bg-[#4a4744] text-[#999] hover:text-[#ccc]"
-      }`}
+      className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-md text-[#888] hover:text-[#ccc] hover:bg-[#403d39] transition-colors"
     >
       {children}
-      <span className="text-[10px] font-semibold uppercase tracking-wide">{label}</span>
+      <span className="text-[9px] font-semibold">{label}</span>
     </button>
   )
 }

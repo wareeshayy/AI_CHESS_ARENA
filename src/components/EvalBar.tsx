@@ -23,7 +23,7 @@ export function EvalBar({
 
   return (
     <div
-      className="w-5 shrink-0 overflow-hidden self-stretch min-h-[200px] flex flex-col border border-r-0"
+      className="w-5 shrink-0 overflow-hidden self-stretch h-full min-h-0 flex flex-col border border-r-0"
       style={{ borderColor }}
     >
       {whiteOnTop ? (

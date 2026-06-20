@@ -12,6 +12,7 @@ interface PlayerBarProps {
   captured?: PieceType[]
   capturedPieceColor?: "w" | "b"
   materialAdvantage?: string | null
+  compact?: boolean
 }
 
 export default function PlayerBar({
@@ -23,29 +24,32 @@ export default function PlayerBar({
   captured = [],
   capturedPieceColor,
   materialAdvantage,
+  compact = false,
 }: PlayerBarProps) {
   const oppColor = capturedPieceColor ?? (color === "w" ? "b" : "w")
 
   return (
     <div
-      className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-        isActive ? "bg-[#3a3937]" : "bg-[#262421]"
-      }`}
+      className={`flex items-center gap-2 px-2 rounded-md transition-colors shrink-0 ${
+        compact ? "py-1" : "py-2 px-3"
+      } ${isActive ? "bg-[#3a3937]" : "bg-transparent"}`}
     >
       <div
-        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 ${
+        className={`rounded-full flex items-center justify-center shrink-0 border-2 ${
+          compact ? "w-7 h-7" : "w-9 h-9"
+        } ${
           color === "w"
             ? "bg-[#f0d9b5] border-[#b58863] text-[#262421]"
             : "bg-[#4a3728] border-[#b58863] text-[#f0d9b5]"
         }`}
       >
-        <ChessPieceIcon color={color} type="k" size={26} />
+        <ChessPieceIcon color={color} type="k" size={compact ? 20 : 26} />
       </div>
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
         <div className="shrink-0">
           <div className="flex items-center gap-2">
-            <span className="text-white font-semibold text-sm truncate">{name}</span>
+            <span className={`text-white font-semibold truncate ${compact ? "text-xs" : "text-sm"}`}>{name}</span>
             {rating && <span className="text-[#999] text-xs">({rating})</span>}
           </div>
           {isThinking && (
