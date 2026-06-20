@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { isValidEmail, sendInviteEmail } from "@/lib/email/invite"
+import { isValidEmail } from "@/lib/email/validate"
+import { sendInviteEmail } from "@/lib/email/send-invite"
 import { getRoom } from "@/lib/multiplayer/room-service"
 
 function resolveInviteLink(request: NextRequest, roomId: string, clientLink?: string): string {

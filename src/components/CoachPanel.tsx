@@ -8,6 +8,7 @@ import type { CoachSentiment, MoveQuality } from "@/lib/ai/coach"
 import type { BoardThemeId } from "@/lib/chess/board-themes"
 import type { Difficulty, Personality } from "@/lib/types/game"
 import { formatEvalScore } from "./EvalBar"
+import { PlainMoveLabel } from "./PlainMoveLabel"
 
 export interface CoachMessage {
   role: "coach" | "user"
@@ -15,6 +16,7 @@ export interface CoachMessage {
   timestamp: number
   sentiment?: CoachSentiment
   moveSan?: string
+  moveColor?: "w" | "b"
   quality?: MoveQuality
   eval?: number
 }
@@ -105,7 +107,7 @@ export default function CoachPanel({
     <div className="flex flex-col h-full bg-[#262421] text-[#ebebeb] overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#403d39] shrink-0">
         <h2 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-          <span className="text-base">🤖</span> Play Coach
+          <span className="text-base">🧔</span> Coach David
         </h2>
         <button
           onClick={onToggleSpeech}
@@ -166,6 +168,7 @@ export default function CoachPanel({
               text={msg.content}
               sentiment={msg.sentiment}
               moveSan={msg.moveSan}
+              moveColor={msg.moveColor}
               quality={msg.quality}
               eval={msg.eval}
             />
@@ -306,6 +309,7 @@ function CoachBubble({
   text,
   sentiment = "neutral",
   moveSan,
+  moveColor = "w",
   quality,
   eval: evalScore,
 }: {
@@ -314,6 +318,7 @@ function CoachBubble({
   text: string
   sentiment?: CoachSentiment
   moveSan?: string
+  moveColor?: "w" | "b"
   quality?: MoveQuality
   eval?: number
 }) {
@@ -332,10 +337,11 @@ function CoachBubble({
         </div>
 
         <div className="bg-white text-[#262421] text-xs leading-relaxed rounded-lg rounded-tl-sm px-3 py-2 shadow-sm">
-          {showHeader && (
-            <div className="flex items-center gap-2 mb-1 pb-1 border-b border-[#e0e0e0]">
-              <span className="font-bold text-[11px]">
-                {moveSan} is {quality === "excellent" ? "excellent" : quality}
+          {showHeader && moveSan && (
+            <div className="flex items-center gap-2 mb-1.5 pb-1.5 border-b border-[#e0e0e0] flex-wrap">
+              <PlainMoveLabel san={moveSan} color={moveColor} size={20} variant="short" />
+              <span className="font-bold text-[11px] capitalize">
+                — {quality === "excellent" ? "excellent!" : quality}
               </span>
               {evalScore !== undefined && (
                 <span className="text-[#81b64c] text-[10px] font-bold ml-auto tabular-nums">

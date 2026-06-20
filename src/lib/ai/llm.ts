@@ -1,4 +1,5 @@
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions"
+import { sanToPlain, replaceSanInText } from "@/lib/chess/plain-language"
 import { validateMove } from "@/lib/chess/validator"
 import { analyzeBoard, formatEvaluation } from "@/lib/chess/analyzer"
 import { generateHint } from "@/lib/chess/hints"
@@ -33,9 +34,9 @@ function localFallbackReply(
     return generateHint(fen, difficulty).hint
   }
   if (message.toLowerCase().includes("best move")) {
-    return `The engine suggests ${analysis.bestMove} with an evaluation of ${formatEvaluation(analysis.score)}.`
+    return `The engine likes ${sanToPlain(analysis.bestMove)} here. The position scores ${formatEvaluation(analysis.score)}.`
   }
-  return `I'm your chess coach! The current evaluation is ${formatEvaluation(analysis.score)}. Ask me about moves, strategy, or request a hint!`
+  return `I'm Coach David, your chess coach! The position scores ${formatEvaluation(analysis.score)}. Ask about plans, pieces, or request a hint — I'll keep it simple.`
 }
 
 function enrichSystemPrompt(base: string, fen: string, gameId: string, difficulty: Difficulty): string {
@@ -44,8 +45,8 @@ function enrichSystemPrompt(base: string, fen: string, gameId: string, difficult
   const hint = generateHint(fen, difficulty)
   return `${base}
 
-Live engine data (use this in your answer):
-- Best move: ${analysis.bestMove}
+Live engine data (use plain English when citing moves to the player):
+- Best move (plain): ${sanToPlain(analysis.bestMove)}
 - Evaluation: ${formatEvaluation(analysis.score)}
 - Strategic hint: ${hint.hint}
 - Moves played: ${history?.moves.length ?? 0}`
@@ -79,7 +80,9 @@ async function chatWithTools(
     iterations++
   }
 
-  return response.choices[0]?.message?.content ?? "I'm not sure how to respond to that."
+    return response.choices[0]?.message?.content
+      ? replaceSanInText(response.choices[0].message.content)
+      : "I'm not sure how to respond to that."
 }
 
 /** Fast engine move for gameplay — no LLM latency */
@@ -88,9 +91,9 @@ export function getEngineMove(fen: string, difficulty: Difficulty): AIMoveRespon
   const analysis = analyzeBoard(fen, depth)
 
   const reasoningMap: Record<Difficulty, string> = {
-    beginner: `I'll play ${analysis.bestMove}. This develops my pieces and helps control the center.`,
-    intermediate: `${analysis.bestMove} improves piece activity (${formatEvaluation(analysis.score)}).`,
-    advanced: `Engine recommends ${analysis.bestMove} at depth ${analysis.depth} (${formatEvaluation(analysis.score)}).`,
+    beginner: `I'll play ${sanToPlain(analysis.bestMove)} — it develops my pieces and helps control the center.`,
+    intermediate: `${sanToPlain(analysis.bestMove)} improves my piece activity (${formatEvaluation(analysis.score)}).`,
+    advanced: `The engine likes ${sanToPlain(analysis.bestMove)} at depth ${analysis.depth} (${formatEvaluation(analysis.score)}).`,
   }
 
   return {
@@ -184,7 +187,8 @@ ${moveList}`
 
     const chat = provider === "groq" ? groqChat : openaiChat
     const response = await chat(messages)
-    return response.choices[0]?.message?.content ?? fallback
+    const content = response.choices[0]?.message?.content
+    return content ? replaceSanInText(content) : fallback
   } catch (err) {
     console.warn(`Review LLM (${provider}) failed:`, err)
     return fallback
@@ -204,12 +208,12 @@ export async function explainPosition(
   const provider = resolveProvider()
 
   const focusPrompt = {
-    position: "Explain the current position: who is better, key plans, and what both sides should aim for.",
-    "best-move": `Recommend the best move (${analysis.bestMove}) and explain why in simple terms.`,
-    "last-move": "Comment on the last move played and whether it was good.",
+    position: "Explain the current position in simple words: who is better, what each side should try to do, and name the key pieces.",
+    "best-move": `Recommend ${sanToPlain(analysis.bestMove)} and explain why a beginner would play it.`,
+    "last-move": "Comment on the last move in plain English — was it good or could they do better?",
   }[focus]
 
-  const engineContext = `Engine eval: ${formatEvaluation(analysis.score)}. Best move: ${analysis.bestMove}. Hint: ${hint.hint}`
+  const engineContext = `Position score: ${formatEvaluation(analysis.score)}. Best move in plain English: ${sanToPlain(analysis.bestMove)}. Hint: ${hint.hint}`
 
   if (!provider) {
     return `${focusPrompt} ${engineContext}`
@@ -233,7 +237,8 @@ export async function explainPosition(
     ]
     const chat = provider === "groq" ? groqChat : openaiChat
     const response = await chat(messages)
-    return response.choices[0]?.message?.content ?? engineContext
+    const content = response.choices[0]?.message?.content
+    return content ? replaceSanInText(content) : engineContext
   } catch (err) {
     console.warn(`Explain LLM (${provider}) failed:`, err)
     return engineContext

@@ -1,5 +1,6 @@
 import { Chess } from "chess.js"
 import { analyzeBoard } from "@/lib/chess/analyzer"
+import { sanToPlain } from "@/lib/chess/plain-language"
 import type { Difficulty, MoveRecord, Personality } from "@/lib/types/game"
 
 export type CoachSentiment = "good" | "bad" | "neutral" | "tip" | "celebrate"
@@ -9,6 +10,7 @@ export interface CoachTip {
   text: string
   sentiment?: CoachSentiment
   moveSan?: string
+  moveColor?: "w" | "b"
   quality?: MoveQuality
   eval?: number
   silent?: boolean
@@ -48,6 +50,10 @@ function classifyMove(evalDrop: number, isBest: boolean): MoveQuality {
   return "blunder"
 }
 
+function plain(san: string): string {
+  return sanToPlain(san)
+}
+
 /** Short welcome — only once at game start */
 export function getWelcomeMessage(
   personality: Personality,
@@ -56,12 +62,12 @@ export function getWelcomeMessage(
   const name = getCoachName(personality)
   const color = playerColor === "w" ? "White" : "Black"
   return {
-    text: `Hi, I'm ${name}. You're ${color} — make a move and I'll review it.`,
+    text: `Hi, I'm ${name}. You're playing ${color}. Move any piece when you're ready — I'll explain everything in plain English.`,
     sentiment: "tip",
   }
 }
 
-/** One concise tip per player move — Chess.com Game Review style */
+/** One concise tip per player move — beginner-friendly language */
 export function getCoachFeedbackAfterPlayerMove(
   moves: MoveRecord[],
   moveIndex: number,
@@ -85,13 +91,15 @@ export function getCoachFeedbackAfterPlayerMove(
   const evalDrop = evalBefore - evalAfter
   const best = isBestMove(result.san, beforeAnalysis.bestMove)
   const quality = classifyMove(evalDrop, best)
-  const san = result.san.replace(/[+#]/, "")
+  const movePlain = plain(result.san)
+  const bestPlain = plain(beforeAnalysis.bestMove)
 
   if (chess.isCheckmate()) {
     return {
-      text: `${san} is checkmate! Well played.`,
+      text: `${movePlain} — that's checkmate! Brilliant finish.`,
       sentiment: "celebrate",
-      moveSan: san,
+      moveSan: result.san,
+      moveColor: playerColor,
       quality: "excellent",
       eval: evalAfter,
     }
@@ -99,9 +107,10 @@ export function getCoachFeedbackAfterPlayerMove(
 
   if (result.san.includes("+")) {
     return {
-      text: `${san} gives check. Look for a follow-up.`,
+      text: `Your ${movePlain}. The enemy king is in check — keep the pressure on!`,
       sentiment: "good",
-      moveSan: san,
+      moveSan: result.san,
+      moveColor: playerColor,
       quality: "good",
       eval: evalAfter,
     }
@@ -110,20 +119,21 @@ export function getCoachFeedbackAfterPlayerMove(
   if (quality === "excellent") {
     const reason = getExcellentReason(result.san, result.captured)
     return {
-      text: `${san} is excellent. ${reason}`,
+      text: `Excellent! ${movePlain}. ${reason}`,
       sentiment: "good",
-      moveSan: san,
+      moveSan: result.san,
+      moveColor: playerColor,
       quality: "excellent",
       eval: evalAfter,
     }
   }
 
   if (quality === "blunder" || quality === "mistake") {
-    const better = beforeAnalysis.bestMove.replace(/[+#]/, "")
     return {
-      text: `${san} is a ${quality}. ${better} was stronger here.`,
+      text: `${movePlain} is a ${quality}. ${bestPlain} would have been much stronger here.`,
       sentiment: "bad",
-      moveSan: san,
+      moveSan: result.san,
+      moveColor: playerColor,
       quality,
       eval: evalAfter,
     }
@@ -131,9 +141,10 @@ export function getCoachFeedbackAfterPlayerMove(
 
   if (quality === "inaccuracy") {
     return {
-      text: `${san} is slightly inaccurate. Consider ${beforeAnalysis.bestMove.replace(/[+#]/, "")}.`,
+      text: `${movePlain} is a bit loose. Consider ${bestPlain} instead.`,
       sentiment: "bad",
-      moveSan: san,
+      moveSan: result.san,
+      moveColor: playerColor,
       quality,
       eval: evalAfter,
     }
@@ -141,30 +152,42 @@ export function getCoachFeedbackAfterPlayerMove(
 
   if (result.captured) {
     return {
-      text: `${san} wins material. Make sure the piece is safe.`,
+      text: `Nice — ${movePlain}. You win material, but make sure that piece stays safe.`,
       sentiment: "good",
-      moveSan: san,
+      moveSan: result.san,
+      moveColor: playerColor,
       quality: "good",
       eval: evalAfter,
     }
   }
 
-  // Good but routine — stay quiet most of the time
   if (moveIndex > 2 && quality === "good") {
-    return { text: "", silent: true, moveSan: san, quality, eval: evalAfter }
+    return { text: "", silent: true, moveSan: result.san, moveColor: playerColor, quality, eval: evalAfter }
   }
 
   if (/^[NBRQK]/.test(result.san) || result.san.startsWith("O-O")) {
     return {
-      text: `${san} develops a piece nicely.`,
+      text: `${movePlain} — good development, your piece is more active now.`,
       sentiment: "good",
-      moveSan: san,
+      moveSan: result.san,
+      moveColor: playerColor,
       quality: "good",
       eval: evalAfter,
     }
   }
 
-  return { text: "", silent: true, moveSan: san, quality, eval: evalAfter }
+  if (/^[a-h]/.test(result.san)) {
+    return {
+      text: `${movePlain} — pawns in the center control more of the board.`,
+      sentiment: "good",
+      moveSan: result.san,
+      moveColor: playerColor,
+      quality: "good",
+      eval: evalAfter,
+    }
+  }
+
+  return { text: "", silent: true, moveSan: result.san, moveColor: playerColor, quality, eval: evalAfter }
 }
 
 /** Only speak up on AI moves when it matters */
@@ -173,6 +196,7 @@ export function getCoachFeedbackAfterAIMove(
   moveIndex: number,
 ): CoachTip | null {
   const move = moves[moveIndex]
+  const aiColor = move.color
   const prevFen =
     moveIndex === 0
       ? "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -181,36 +205,46 @@ export function getCoachFeedbackAfterAIMove(
   const { chess, result } = applyMove(prevFen, move.uci)
   if (!result) return null
 
-  const san = result.san.replace(/[+#]/, "")
+  const movePlain = plain(result.san)
 
   if (chess.isCheckmate()) {
-    return { text: `Checkmate on ${san}. Study how the attack built up.`, sentiment: "bad", moveSan: san }
+    return {
+      text: `Checkmate with ${movePlain}. Study how the attack built up.`,
+      sentiment: "bad",
+      moveSan: result.san,
+      moveColor: aiColor,
+    }
   }
   if (result.san.includes("+")) {
-    return { text: `You're in check! Get your king safe first.`, sentiment: "tip" }
+    return { text: `Your king is in check! Get to safety before anything else.`, sentiment: "tip" }
   }
   if (result.captured) {
-    return { text: `I played ${san} — can you recapture safely?`, sentiment: "tip" }
+    return {
+      text: `I played ${movePlain} — can you recapture safely?`,
+      sentiment: "tip",
+      moveSan: result.san,
+      moveColor: aiColor,
+    }
   }
 
   return null
 }
 
 function getExcellentReason(san: string, captured?: string): string {
-  if (captured) return "Winning material while improving your position."
-  if (san.startsWith("N") || san.startsWith("B")) return "Developing the piece and increasing influence in the center."
-  if (san.startsWith("O-O")) return "Castling keeps your king safe."
-  if (/^[a-h]/.test(san)) return "Controlling important central squares."
-  return "The engine's top choice in this position."
+  if (captured) return "You win material and improve your position."
+  if (san.startsWith("N") || san.startsWith("B")) return "Your knight or bishop is now pointing at the center."
+  if (san.startsWith("O-O")) return "Castling tucks your king away safely."
+  if (/^[a-h]/.test(san)) return "That pawn grabs space in the center."
+  return "The computer agrees — this is the best move here."
 }
 
 export function getHintMessage(fen: string): CoachTip {
   const analysis = analyzeBoard(fen, 2)
-  const best = analysis.bestMove.replace(/[+#]/, "")
+  const bestPlain = plain(analysis.bestMove)
   return {
-    text: `Try ${best} — it scores best here.`,
+    text: `Try ${bestPlain} — it scores best in this position.`,
     sentiment: "tip",
-    moveSan: best,
+    moveSan: analysis.bestMove,
   }
 }
 
@@ -220,11 +254,11 @@ export function getGameOverCoachMessage(
 ): CoachTip {
   if (status === "checkmate") {
     return winner === "player"
-      ? { text: "You won! Replay the game to review your best moves.", sentiment: "celebrate" }
+      ? { text: "You won! Replay the game to see your best moves.", sentiment: "celebrate" }
       : { text: "Game over. Replay to see where things went wrong.", sentiment: "tip" }
   }
   if (status === "stalemate" || status === "draw") {
-    return { text: "Draw. Solid defense!", sentiment: "neutral" }
+    return { text: "It's a draw — solid defense from both sides.", sentiment: "neutral" }
   }
   return { text: "", silent: true }
 }

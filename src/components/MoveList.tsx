@@ -5,37 +5,13 @@ import {
   evaluationToBarHeight,
   evaluationBarColor,
 } from "@/lib/chess/notation"
-import { ChessPieceIcon } from "./ChessPieces"
-import type { PieceType } from "@/lib/chess/captured"
+import { PlainMoveLabel } from "./PlainMoveLabel"
 
 interface MoveListProps {
   moves: { san: string; timeSpent?: number; evaluation?: number }[]
   currentMoveIndex: number
   onMoveClick: (index: number) => void
   showAnalysis?: boolean
-}
-
-function SanDisplay({ san, color }: { san: string; color: "w" | "b" }) {
-  if (san === "O-O" || san === "O-O-O") return <span>{san}</span>
-
-  const pieceMap: Record<string, PieceType | "k"> = {
-    K: "k", Q: "q", R: "r", B: "b", N: "n",
-  }
-  const first = san.charAt(0)
-  const piece = pieceMap[first]
-  if (piece) {
-    return (
-      <span className="inline-flex items-center gap-0.5">
-        {piece === "k" ? (
-          <ChessPieceIcon color={color} type="k" size={16} />
-        ) : (
-          <ChessPieceIcon color={color} type={piece} size={16} />
-        )}
-        <span>{san.slice(1)}</span>
-      </span>
-    )
-  }
-  return <span>{san}</span>
 }
 
 function MoveCell({
@@ -56,15 +32,15 @@ function MoveCell({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-0.5 px-2 py-1 rounded text-sm font-mono transition-colors ${
+      className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors min-w-0 ${
         isActive
           ? "bg-[#b58863] text-[#262421]"
           : "text-[#ccc] hover:bg-[#3a3a3a] hover:text-white"
       }`}
     >
-      <SanDisplay san={san} color={color} />
+      <PlainMoveLabel san={san} color={color} size={18} variant="short" className="truncate" />
       {timeSpent !== undefined && (
-        <span className="ml-1 text-[10px] text-[#888]">{timeSpent.toFixed(1)}s</span>
+        <span className="ml-0.5 text-[10px] text-[#888] shrink-0">{timeSpent.toFixed(1)}s</span>
       )}
     </button>
   )
@@ -88,7 +64,6 @@ export default function MoveList({
 
   return (
     <div className="flex flex-1 min-h-0">
-      {/* Move list */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         {pairs.map((pair) => (
           <div
@@ -100,7 +75,7 @@ export default function MoveList({
             <span className="w-10 shrink-0 text-right pr-2 text-[#888] font-mono text-xs">
               {pair.number}.
             </span>
-            <div className="flex-1 flex">
+            <div className="flex-1 flex min-w-0">
               {pair.white && (
                 <MoveCell
                   san={pair.white.san}
@@ -126,7 +101,6 @@ export default function MoveList({
         ))}
       </div>
 
-      {/* Evaluation bar (Lichess-style) */}
       {showAnalysis && (
         <div className="w-3 shrink-0 flex flex-col gap-px py-1 bg-[#1a1a1a]">
           {pairs.map((pair) => {

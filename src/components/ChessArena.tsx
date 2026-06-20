@@ -19,6 +19,7 @@ import {
   type CoachTip,
   type MoveQuality,
 } from "@/lib/ai/coach"
+import { replaceSanInText } from "@/lib/chess/plain-language"
 import {
   getCapturedAtIndex,
   materialAdvantage,
@@ -34,7 +35,7 @@ const COACH_RATINGS: Record<Personality, number> = {
 }
 
 const PERSONALITY_NAMES: Record<Personality, string> = {
-  friendly_coach: "Coach Alex",
+  friendly_coach: "Coach David",
   grandmaster: "GM Stockfish",
   aggressive_rival: "Rival Max",
   casual_opponent: "Casual Sam",
@@ -91,6 +92,7 @@ export default function ChessArena() {
             moveSan: tip.moveSan,
             quality: tip.quality,
             eval: tip.eval,
+            moveColor: tip.moveColor,
           },
         ]
       })
@@ -321,11 +323,12 @@ export default function ChessArena() {
         })
         const data = await res.json()
         if (data.reply) {
+          const reply = replaceSanInText(data.reply)
           setCoachMessages((prev) => [
             ...prev,
-            { role: "coach", content: data.reply, timestamp: Date.now(), sentiment: "tip" },
+            { role: "coach", content: reply, timestamp: Date.now(), sentiment: "tip" },
           ])
-          speak(data.reply)
+          speak(reply)
         }
       } catch {
         addCoachTip({ text: "Could not reach the coach. Try again.", sentiment: "tip" }, false)
@@ -348,7 +351,7 @@ export default function ChessArena() {
         })
         const data = await res.json()
         if (data.explanation) {
-          addCoachTip({ text: data.explanation, sentiment: "tip" })
+          addCoachTip({ text: replaceSanInText(data.explanation), sentiment: "tip" })
         }
       } catch {
         addCoachTip({ text: "Analysis unavailable right now.", sentiment: "tip" }, false)

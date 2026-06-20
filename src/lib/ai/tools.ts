@@ -1,4 +1,5 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions"
+import { plainLanguageInstruction } from "@/lib/chess/plain-language"
 
 export const CHESS_TOOLS: ChatCompletionTool[] = [
   {
@@ -72,19 +73,19 @@ export function buildSystemPrompt(
   gameId: string,
 ): string {
   const personalityMap: Record<string, string> = {
-    friendly_coach: "You are a warm, encouraging chess coach who celebrates good moves and gently corrects mistakes.",
-    grandmaster: "You are a precise, analytical grandmaster who speaks with authority and depth.",
-    aggressive_rival: "You are a fierce competitive rival who plays aggressively and trash-talks lightly.",
-    casual_opponent: "You are a relaxed casual player who keeps things fun and lighthearted.",
+    friendly_coach: "You are Coach David — a warm, patient teacher who explains chess like talking to a friend. Use simple words.",
+    grandmaster: "You are Coach Magnus — precise but still plain-spoken, avoiding jargon when possible.",
+    aggressive_rival: "You are Coach Max — competitive and direct, but always name pieces clearly (pawn, knight, etc.).",
+    casual_opponent: "You are Coach Sam — relaxed and fun, keeping explanations easy to follow.",
   }
 
   const difficultyMap: Record<string, string> = {
-    beginner: "Use simple language. Explain basic concepts like forks, pins, and development. Avoid deep theory.",
-    intermediate: "Use moderate chess terminology. Discuss plans, piece activity, and common tactical motifs.",
-    advanced: "Use advanced terminology. Discuss prophylaxis, pawn structures, and deep strategic concepts.",
+    beginner: "Assume the player is new. Explain ideas with everyday language — forks, pins, and development in simple terms.",
+    intermediate: "Use clear plans and tactics, still avoiding chess notation in speech.",
+    advanced: "Discuss strategy deeply, but still say 'knight to f3' instead of 'Nf3'.",
   }
 
-  return `You are a professional chess coach and opponent in AI Chess Arena.
+  return `You are a professional chess coach in AI Chess Arena.
 
 Personality: ${personalityMap[personality] ?? personalityMap.friendly_coach}
 Difficulty level: ${difficultyMap[difficulty] ?? difficultyMap.intermediate}
@@ -92,16 +93,19 @@ Difficulty level: ${difficultyMap[difficulty] ?? difficultyMap.intermediate}
 Current FEN: ${fen}
 Game ID: ${gameId}
 
+${plainLanguageInstruction()}
+
 Rules:
 - NEVER generate illegal moves. Always call legal_move_validator before making a move.
 - Use board_analyzer to evaluate positions before choosing moves.
 - Use game_history to understand the flow of the game.
 - Use hint_generator when the user asks for hints.
-- Explain moves in language appropriate to the difficulty level.
-- Provide strategic insights after each move.
+- Explain every move using piece names and square names only.
 
-When making a move, respond with JSON:
-{"move": "Nf3", "reasoning": "Controls the center and develops a piece.", "evaluation": "+0.8"}
+When making a move internally, use standard notation in JSON only:
+{"move": "Nf3", "reasoning": "The knight heads to f3 and controls the center.", "evaluation": "+0.8"}
 
-When answering questions, be conversational and educational.`
+When speaking to the player, rewrite all moves in plain English in the reasoning field too.
+
+When answering questions, be conversational, encouraging, and educational.`
 }

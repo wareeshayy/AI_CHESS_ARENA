@@ -121,15 +121,14 @@ export default function MultiplayerRoomView({ roomId }: MultiplayerRoomViewProps
           </div>
 
           <div className="shrink-0 px-3 py-2 text-xs space-y-1 border-b border-[#403d39]">
-            <p>
-              Room: <span className="font-mono text-[#81b64c]">{roomId}</span>
-            </p>
             {yourColor && (
               <p>
-                You: <strong className="capitalize">{yourColor}</strong>
+                You play: <strong className="capitalize">{yourColor}</strong>
               </p>
             )}
-            <p className="text-[#aaa]">Players: {room?.players.filter((p) => p.connected).length ?? 0}/2</p>
+            <p className="text-[#aaa]">
+              {room?.players.filter((p) => p.connected).length ?? 0} of 2 players joined
+            </p>
           </div>
 
           <RoomInvitePanel roomId={roomId} inviteLink={inviteLink} disabled={!canInvite} />
