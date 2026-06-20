@@ -39,8 +39,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error:
-            "Email service not configured. Add GMAIL_USER + GMAIL_APP_PASSWORD on Vercel for automatic invites.",
+          error: "Email service not configured. Add GMAIL_USER and GMAIL_APP_PASSWORD on Vercel.",
         },
         { status: 503 },
       )
