@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import AppNavSidebar from "./AppNavSidebar"
+import AppMobileNav from "./AppMobileNav"
 
 export default function HomeLobby() {
   const router = useRouter()
@@ -33,10 +34,10 @@ export default function HomeLobby() {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-[#312e2b] text-white flex">
+    <div className="arena-shell h-[100dvh] overflow-hidden bg-[#312e2b] text-white flex flex-col md:flex-row">
       <AppNavSidebar active="home" />
 
-      <main className="flex-1 min-h-0 flex items-center justify-center p-6">
+      <main className="flex-1 min-h-0 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
         <div className="w-full max-w-md space-y-4">
           <h1 className="text-2xl font-bold text-center text-[#ebebeb] mb-6">Choose Mode</h1>
 
@@ -81,6 +82,8 @@ export default function HomeLobby() {
           </p>
         </div>
       </main>
+
+      <AppMobileNav active="home" />
     </div>
   )
 }

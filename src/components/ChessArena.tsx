@@ -5,6 +5,7 @@ import { Chess } from "chess.js"
 import ChessBoardPanel from "./ChessBoardPanel"
 import CoachPanel, { type CoachMessage } from "./CoachPanel"
 import AppNavSidebar from "./AppNavSidebar"
+import AppMobileNav from "./AppMobileNav"
 import BoardStage from "./BoardStage"
 import PlayerBar from "./PlayerBar"
 import { useCoachSpeech } from "@/hooks/useCoachSpeech"
@@ -66,6 +67,7 @@ export default function ChessArena() {
   const [lastMove, setLastMove] = useState<{ from: string; to: string }>()
   const [gameOverMessage, setGameOverMessage] = useState<string | null>(null)
   const [review, setReview] = useState<string | null>(null)
+  const [mobilePanel, setMobilePanel] = useState(false)
 
   const personality = game?.personality ?? settings.personality
   const coachName = getCoachName(personality)
@@ -436,12 +438,15 @@ export default function ChessArena() {
   const aiAdv = formatAdvantage(materialAdvantage(captured, aiColor))
 
   return (
-    <div className="h-screen overflow-hidden bg-[#312e2b] text-white flex">
+    <div className="arena-shell h-[100dvh] overflow-hidden bg-[#312e2b] text-white flex flex-col md:flex-row">
       <AppNavSidebar active="play" />
 
-      <div className="flex-1 min-w-0 min-h-0 flex">
-        {/* Board column — maximum breathing room */}
-        <div className="flex-1 min-w-0 min-h-0 flex flex-col px-2 py-1 overflow-hidden">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+        <div
+          className={`flex flex-col min-w-0 min-h-0 px-1 py-1 lg:px-2 lg:flex-1 ${
+            mobilePanel ? "hidden lg:flex" : "flex flex-1"
+          }`}
+        >
           <PlayerBar
             compact
             name={topPlayer.name}
@@ -479,10 +484,30 @@ export default function ChessArena() {
             capturedPieceColor={bottomPlayer.isAI ? playerColor : aiColor}
             materialAdvantage={bottomPlayer.isAI ? aiAdv : playerAdv}
           />
+
+          <button
+            type="button"
+            onClick={() => setMobilePanel(true)}
+            className="lg:hidden shrink-0 mt-1 py-2.5 bg-[#403d39] hover:bg-[#4a4744] rounded-lg text-xs font-bold text-[#ccc]"
+          >
+            Coach &amp; options
+          </button>
         </div>
 
-        {/* Right panel — all options stacked vertically */}
-        <aside className="w-[min(300px,30vw)] shrink-0 min-h-0 border-l border-[#403d39]">
+        <aside
+          className={`min-h-0 overflow-hidden border-[#403d39] ${
+            mobilePanel
+              ? "flex flex-1 w-full lg:w-[min(300px,30vw)] lg:shrink-0 lg:border-l"
+              : "hidden lg:flex lg:w-[min(300px,30vw)] lg:shrink-0 lg:border-l"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => setMobilePanel(false)}
+            className="lg:hidden shrink-0 w-full px-3 py-2 text-left text-xs font-bold text-[#81b64c] border-b border-[#403d39] bg-[#262421]"
+          >
+            ← Back to board
+          </button>
           <CoachPanel
             coachName={coachName}
             coachRating={COACH_RATINGS[personality]}
@@ -527,6 +552,8 @@ export default function ChessArena() {
           />
         </aside>
       </div>
+
+      <AppMobileNav active="play" />
     </div>
   )
 }

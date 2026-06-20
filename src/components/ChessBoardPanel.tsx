@@ -147,13 +147,15 @@ export default function ChessBoardPanel({
 
   return (
     <div className="flex items-stretch w-full h-full max-w-full max-h-full overflow-hidden">
-      <EvalBar
+      <div className="hidden sm:block shrink-0">
+        <EvalBar
         evaluation={evalForBar}
         orientation={orientation}
         evalLight={styles.evalLight}
         evalDark={styles.evalDark}
         borderColor={styles.boardBorder}
       />
+      </div>
 
       <div className="relative flex-1 min-h-0 min-w-0 h-full w-full overflow-hidden">
         <Chessboard

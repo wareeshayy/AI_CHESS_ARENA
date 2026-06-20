@@ -17,6 +17,13 @@ export const metadata: Metadata = {
   description: "Play chess against an AI coach powered by LLM tool calling",
 }
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{

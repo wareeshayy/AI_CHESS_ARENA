@@ -12,16 +12,31 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  overflow: hidden;
+  height: 100%;
+  height: 100dvh;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   overflow: hidden;
   height: 100%;
+  height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
 }
 
-html {
-  overflow: hidden;
-  height: 100%;
+/* Mobile: allow panel scroll when stacked layout */
+@media (max-width: 1023px) {
+  .arena-shell {
+    height: 100dvh;
+    padding-bottom: 3.5rem;
+  }
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Custom scrollbar for move list */

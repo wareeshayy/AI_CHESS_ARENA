@@ -24,7 +24,7 @@ function navClass(active: boolean) {
 export default function AppNavSidebar({ active = "home" }: AppNavSidebarProps) {
   return (
     <nav
-      className="w-14 shrink-0 bg-[#262421] border-r border-[#403d39] flex flex-col items-center py-3 gap-2"
+      className="hidden md:flex w-14 shrink-0 bg-[#262421] border-r border-[#403d39] flex-col items-center py-3 gap-2"
       aria-label="Main navigation"
     >
       <Link href="/" className="mb-2 text-[#81b64c] text-xl font-bold" title="AI Chess Arena">

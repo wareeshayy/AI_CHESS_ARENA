@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { Chess } from "chess.js"
 import AppNavSidebar from "./AppNavSidebar"
+import AppMobileNav from "./AppMobileNav"
 import BoardStage from "./BoardStage"
 import ChessBoardPanel from "./ChessBoardPanel"
 import PlayerBar from "./PlayerBar"
@@ -20,6 +21,7 @@ export default function MultiplayerRoomView({ roomId }: MultiplayerRoomViewProps
   const { room, yourColor, error, sendMove } = useMultiplayerRoom(roomId)
   const { themeId: boardTheme, setThemeId: setBoardTheme } = useBoardTheme()
   const [optionsOpen, setOptionsOpen] = useState(false)
+  const [mobilePanel, setMobilePanel] = useState(false)
 
   const orientation = yourColor === "black" ? "black" : "white"
   const playerChessColor = yourColor === "black" ? "b" : yourColor === "white" ? "w" : "w"
@@ -61,12 +63,71 @@ export default function MultiplayerRoomView({ roomId }: MultiplayerRoomViewProps
     return true
   }
 
+  const sidePanel = (
+    <>
+      <div className="shrink-0 px-3 py-2 border-b border-[#403d39] flex items-center justify-between gap-2">
+        <h2 className="text-sm font-bold flex items-center gap-2">
+          <span>👥</span> Multiplayer
+        </h2>
+        <button
+          type="button"
+          onClick={copyLink}
+          className="px-2 py-1.5 bg-[#403d39] hover:bg-[#4a4744] rounded text-[10px] font-bold shrink-0"
+        >
+          Copy Link
+        </button>
+      </div>
+
+      <div
+        className={`shrink-0 px-3 py-1.5 text-center text-[11px] font-semibold ${
+          full ? "bg-red-900/40 text-red-300" : waiting ? "bg-[#403d39] text-[#ccc]" : "bg-[#81b64c]/20 text-[#81b64c]"
+        }`}
+      >
+        {statusMessage}
+      </div>
+
+      <div className="shrink-0 px-3 py-2 text-xs space-y-1 border-b border-[#403d39]">
+        {yourColor && (
+          <p>
+            You play: <strong className="capitalize">{yourColor}</strong>
+          </p>
+        )}
+        <p className="text-[#aaa]">
+          {room?.players.filter((p) => p.connected).length ?? 0} of 2 players joined
+        </p>
+      </div>
+
+      <RoomInvitePanel roomId={roomId} inviteLink={inviteLink} disabled={!canInvite} />
+
+      <div className="border-b border-[#403d39] shrink-0">
+        <button
+          type="button"
+          onClick={() => setOptionsOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-[#ccc] hover:bg-[#2e2c29]"
+        >
+          <span>Options</span>
+          <span className="text-[#666] text-xs">{optionsOpen ? "▲" : "▼"}</span>
+        </button>
+        {optionsOpen && (
+          <div className="px-3 pb-3 bg-[#2a2826]">
+            <BoardThemePicker value={boardTheme} onChange={setBoardTheme} layout="grid" />
+          </div>
+        )}
+      </div>
+    </>
+  )
+
   return (
-    <div className="h-screen overflow-hidden bg-[#312e2b] text-white flex">
+    <div className="arena-shell h-[100dvh] overflow-hidden bg-[#312e2b] text-white flex flex-col md:flex-row">
       <AppNavSidebar active="home" />
 
-      <div className="flex-1 min-w-0 min-h-0 flex">
-        <div className="flex-1 min-w-0 min-h-0 flex flex-col px-2 py-1 overflow-hidden">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+        {/* Board — full width on mobile */}
+        <div
+          className={`flex flex-col min-w-0 min-h-0 px-1 py-1 lg:px-2 lg:flex-1 ${
+            mobilePanel ? "hidden lg:flex" : "flex flex-1"
+          }`}
+        >
           <PlayerBar
             compact
             name={topName}
@@ -96,62 +157,36 @@ export default function MultiplayerRoomView({ roomId }: MultiplayerRoomViewProps
               room ? new Chess(room.fen).turn() === (orientation === "white" ? playerChessColor : "b") : false
             }
           />
+
+          <button
+            type="button"
+            onClick={() => setMobilePanel(true)}
+            className="lg:hidden shrink-0 mt-1 py-2.5 bg-[#403d39] hover:bg-[#4a4744] rounded-lg text-xs font-bold text-[#ccc]"
+          >
+            Invite &amp; options
+          </button>
         </div>
 
-        <aside className="w-[min(280px,28vw)] shrink-0 min-h-0 border-l border-[#403d39] flex flex-col bg-[#262421] overflow-hidden">
-          <div className="shrink-0 px-3 py-2.5 border-b border-[#403d39] flex items-center justify-between">
-            <h2 className="text-sm font-bold flex items-center gap-2">
-              <span>👥</span> Multiplayer
-            </h2>
-            <button
-              type="button"
-              onClick={copyLink}
-              className="px-2 py-1 bg-[#403d39] hover:bg-[#4a4744] rounded text-[10px] font-bold"
-            >
-              Copy Link
-            </button>
-          </div>
-
-          <div
-            className={`shrink-0 px-3 py-1.5 text-center text-[11px] font-semibold ${
-              full ? "bg-red-900/40 text-red-300" : waiting ? "bg-[#403d39] text-[#ccc]" : "bg-[#81b64c]/20 text-[#81b64c]"
-            }`}
+        {/* Side panel — below board on tablet, beside on desktop; full screen tab on phone */}
+        <aside
+          className={`bg-[#262421] flex flex-col min-h-0 overflow-y-auto scrollbar-thin border-[#403d39] ${
+            mobilePanel
+              ? "flex flex-1 w-full lg:w-[min(300px,30vw)] lg:shrink-0 lg:border-l"
+              : "hidden lg:flex lg:w-[min(300px,30vw)] lg:shrink-0 lg:border-l"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => setMobilePanel(false)}
+            className="lg:hidden shrink-0 px-3 py-2 text-left text-xs font-bold text-[#81b64c] border-b border-[#403d39]"
           >
-            {statusMessage}
-          </div>
-
-          <div className="shrink-0 px-3 py-2 text-xs space-y-1 border-b border-[#403d39]">
-            {yourColor && (
-              <p>
-                You play: <strong className="capitalize">{yourColor}</strong>
-              </p>
-            )}
-            <p className="text-[#aaa]">
-              {room?.players.filter((p) => p.connected).length ?? 0} of 2 players joined
-            </p>
-          </div>
-
-          <RoomInvitePanel roomId={roomId} inviteLink={inviteLink} disabled={!canInvite} />
-
-          <div className="border-b border-[#403d39] shrink-0">
-            <button
-              type="button"
-              onClick={() => setOptionsOpen((v) => !v)}
-              className="w-full flex items-center justify-between px-3 py-2 text-sm font-semibold text-[#ccc] hover:bg-[#2e2c29]"
-            >
-              <span>Options</span>
-              <span className="text-[#666] text-xs">{optionsOpen ? "▲" : "▼"}</span>
-            </button>
-            {optionsOpen && (
-              <div className="px-3 pb-3 bg-[#2a2826]">
-                <BoardThemePicker value={boardTheme} onChange={setBoardTheme} layout="grid" />
-              </div>
-            )}
-          </div>
-
-          <div className="flex-1 min-h-0" />
+            ← Back to board
+          </button>
+          {sidePanel}
         </aside>
       </div>
+
+      <AppMobileNav active="home" />
     </div>
   )
 }
