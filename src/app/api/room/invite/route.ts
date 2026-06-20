@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { isEmailProviderConfigured } from "@/lib/email/config"
 import { isValidEmail } from "@/lib/email/validate"
 import { sendInviteEmail } from "@/lib/email/send-invite"
 import { getRoom } from "@/lib/multiplayer/room-service"
@@ -34,6 +35,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 })
     }
 
+    if (!isEmailProviderConfigured()) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Email service not configured. Add GMAIL_USER + GMAIL_APP_PASSWORD on Vercel for automatic invites.",
+        },
+        { status: 503 },
+      )
+    }
+
     const room = await getRoom(roomId.toLowerCase())
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 })
@@ -45,36 +57,23 @@ export async function POST(request: NextRequest) {
 
     const inviteLink = resolveInviteLink(request, roomId.toLowerCase(), clientLink)
 
-    const params = {
+    const result = await sendInviteEmail({
       to: email,
       roomId: roomId.toLowerCase(),
       inviteLink,
       message: typeof message === "string" ? message.slice(0, 500) : undefined,
-    }
-
-    if (!process.env.RESEND_API_KEY) {
-      return NextResponse.json(
-        { error: "Email service not configured. Add RESEND_API_KEY on Vercel." },
-        { status: 503 },
-      )
-    }
-
-    const result = await sendInviteEmail(params)
+    })
 
     if (!result.ok) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: result.error,
-          fallback: result.fallback,
-          mailtoUrl: result.mailtoUrl,
-          inviteLink,
-        },
-        { status: result.fallback === "mailto" ? 200 : 502 },
-      )
+      return NextResponse.json({ ok: false, error: result.error, inviteLink }, { status: 502 })
     }
 
-    return NextResponse.json({ ok: true, message: "Invite sent!", inviteLink })
+    return NextResponse.json({
+      ok: true,
+      message: "Invite sent!",
+      provider: result.provider,
+      inviteLink,
+    })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }

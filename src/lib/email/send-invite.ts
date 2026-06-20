@@ -4,17 +4,20 @@ import {
   buildInviteHtml,
   buildInviteSubject,
   buildInviteText,
-  buildMailtoUrl,
   isResendTestingLimitError,
   type InviteEmailParams,
 } from "./templates"
 
 export type SendInviteResult =
-  | { ok: true; provider?: "gmail" | "resend" }
-  | { ok: false; error: string; fallback?: "mailto"; mailtoUrl?: string }
+  | { ok: true; provider: "gmail" | "resend" | "resend-smtp" }
+  | { ok: false; error: string }
 
 function getFromAddress(fromName?: string): string {
-  const raw = process.env.EMAIL_FROM ?? process.env.SMTP_USER ?? process.env.GMAIL_USER ?? "onboarding@resend.dev"
+  const raw =
+    process.env.EMAIL_FROM ??
+    process.env.SMTP_USER ??
+    process.env.GMAIL_USER ??
+    "onboarding@resend.dev"
   if (raw.includes("<")) return raw
   const name = fromName ?? process.env.EMAIL_FROM_NAME ?? "AI Chess Arena"
   return `${name} <${raw}>`
@@ -48,6 +51,33 @@ async function sendViaGmail(params: InviteEmailParams): Promise<SendInviteResult
   return { ok: true, provider: "gmail" }
 }
 
+async function sendViaResendSmtp(params: InviteEmailParams): Promise<SendInviteResult> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    return { ok: false, error: "RESEND_API_KEY missing" }
+  }
+
+  const nodemailer = await import("nodemailer")
+  const fromName = params.fromName ?? process.env.EMAIL_FROM_NAME ?? "AI Chess Arena"
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.resend.com",
+    port: Number(process.env.RESEND_SMTP_PORT ?? 465),
+    secure: true,
+    auth: { user: "resend", pass: apiKey },
+  })
+
+  await transporter.sendMail({
+    from: getFromAddress(fromName),
+    to: params.to.trim(),
+    subject: buildInviteSubject(),
+    html: buildInviteHtml({ ...params, fromName }),
+    text: buildInviteText({ ...params, fromName }),
+  })
+
+  return { ok: true, provider: "resend-smtp" }
+}
+
 async function sendViaResend(params: InviteEmailParams): Promise<SendInviteResult> {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) {
@@ -69,9 +99,8 @@ async function sendViaResend(params: InviteEmailParams): Promise<SendInviteResul
     if (isResendTestingLimitError(error.message)) {
       return {
         ok: false,
-        error: "Auto-send unavailable for this address. Use Email app or Copy link instead.",
-        fallback: "mailto",
-        mailtoUrl: buildMailtoUrl({ ...params, fromName }),
+        error:
+          "Resend test mode only emails your account address. Add GMAIL_USER and GMAIL_APP_PASSWORD on Vercel to auto-send invites to anyone.",
       }
     }
     return { ok: false, error: error.message }
@@ -85,18 +114,11 @@ async function sendViaResend(params: InviteEmailParams): Promise<SendInviteResul
 }
 
 export async function sendInviteEmail(params: InviteEmailParams): Promise<SendInviteResult> {
-  const fromName = params.fromName ?? process.env.EMAIL_FROM_NAME ?? "AI Chess Arena"
-  const mailtoFallback = (): SendInviteResult => ({
-    ok: false,
-    error: "Auto-send unavailable — use Email app or Copy link (both free, no setup).",
-    fallback: "mailto",
-    mailtoUrl: buildMailtoUrl({ ...params, fromName }),
-  })
-
   const hasGmail = !!(process.env.SMTP_USER ?? process.env.GMAIL_USER)
+  const hasGmailPass = !!(process.env.SMTP_PASS ?? process.env.GMAIL_APP_PASSWORD)
   const hasResend = !!process.env.RESEND_API_KEY
 
-  if (hasGmail) {
+  if (hasGmail && hasGmailPass) {
     try {
       const result = await sendViaGmail(params)
       if (result.ok) return result
@@ -106,15 +128,37 @@ export async function sendInviteEmail(params: InviteEmailParams): Promise<SendIn
   }
 
   if (hasResend) {
-    const result = await sendViaResend(params)
-    if (result.ok) return result
-    if (result.fallback === "mailto") return result
-    if (hasGmail) return result
+    const sdkResult = await sendViaResend(params)
+    if (sdkResult.ok) return sdkResult
+
+    if (!isResendTestingLimitError(sdkResult.error)) {
+      return sdkResult
+    }
+
+    try {
+      const smtpResult = await sendViaResendSmtp(params)
+      if (smtpResult.ok) return smtpResult
+    } catch (err) {
+      console.warn("Resend SMTP send failed:", err)
+    }
+
+    if (hasGmail && hasGmailPass) {
+      return {
+        ok: false,
+        error: "Could not send invite. Check Gmail app password on Vercel.",
+      }
+    }
+
+    return sdkResult
   }
 
-  if (!hasGmail && !hasResend) {
-    return mailtoFallback()
+  if (hasGmail && !hasGmailPass) {
+    return { ok: false, error: "GMAIL_APP_PASSWORD is missing on the server." }
   }
 
-  return mailtoFallback()
+  return {
+    ok: false,
+    error:
+      "Email not configured. Add GMAIL_USER + GMAIL_APP_PASSWORD (recommended) or RESEND_API_KEY on Vercel.",
+  }
 }
