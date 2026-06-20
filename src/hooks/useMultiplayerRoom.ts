@@ -54,12 +54,16 @@ export function useMultiplayerRoom(roomId: string) {
     if (!roomId) return
     ensurePlayerId()
     joinedRef.current = false
-    setJoining(true)
-    setError(null)
 
     let pollTimer: ReturnType<typeof setInterval> | null = null
     let socketConnected = false
     let cancelled = false
+
+    queueMicrotask(() => {
+      if (cancelled) return
+      setJoining(true)
+      setError(null)
+    })
 
     const markConnected = () => {
       connectedRef.current = true
