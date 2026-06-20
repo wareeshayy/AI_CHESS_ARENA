@@ -204,9 +204,36 @@ export default function ChessArena() {
     }
   }, [settings, addCoachTip, coachAfterMoves])
 
+  const handleGameOver = useCallback(
+    async (g: GameState) => {
+      const messages: Record<string, string> = {
+        checkmate: g.winner === "player" ? "Checkmate! You win!" : "Checkmate! AI wins.",
+        stalemate: "Stalemate — Draw.",
+        draw: "Draw.",
+      }
+      setGameOverMessage(messages[g.status] ?? "Game over.")
+      const coachTip = getGameOverCoachMessage(g.status, g.winner)
+      addCoachTip(coachTip)
+      try {
+        const res = await fetch("/api/review", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gameId: g.id }),
+        })
+        const data = await res.json()
+        setReview(data.review)
+      } catch {
+        /* ignore */
+      }
+    },
+    [addCoachTip],
+  )
+
   useEffect(() => {
-    startGame()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    queueMicrotask(() => {
+      void startGame()
+    })
+  }, [startGame])
 
   // Sync board when reviewing past moves (not during live play)
   const goToMove = useCallback(
@@ -274,30 +301,8 @@ export default function ChessArena() {
 
       return true
     },
-    [game, canPlayerMove, coachAfterMoves],
+    [game, canPlayerMove, coachAfterMoves, handleGameOver],
   )
-
-  const handleGameOver = async (g: GameState) => {
-    const messages: Record<string, string> = {
-      checkmate: g.winner === "player" ? "Checkmate! You win!" : "Checkmate! AI wins.",
-      stalemate: "Stalemate — Draw.",
-      draw: "Draw.",
-    }
-    setGameOverMessage(messages[g.status] ?? "Game over.")
-    const coachTip = getGameOverCoachMessage(g.status, g.winner)
-    addCoachTip(coachTip)
-    try {
-      const res = await fetch("/api/review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId: g.id }),
-      })
-      const data = await res.json()
-      setReview(data.review)
-    } catch {
-      /* ignore */
-    }
-  }
 
   const handleHint = () => {
     if (!game) return

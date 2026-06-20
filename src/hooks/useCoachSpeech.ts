@@ -5,7 +5,10 @@ import { useCallback, useEffect, useRef, useState } from "react"
 export function useCoachSpeech(initialEnabled = true) {
   const [speechEnabled, setSpeechEnabled] = useState(initialEnabled)
   const enabledRef = useRef(speechEnabled)
-  enabledRef.current = speechEnabled
+
+  useEffect(() => {
+    enabledRef.current = speechEnabled
+  }, [speechEnabled])
 
   useEffect(() => {
     if (typeof window !== "undefined") {
