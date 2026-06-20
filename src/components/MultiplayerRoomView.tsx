@@ -7,6 +7,7 @@ import BoardStage from "./BoardStage"
 import ChessBoardPanel from "./ChessBoardPanel"
 import PlayerBar from "./PlayerBar"
 import BoardThemePicker from "./BoardThemePicker"
+import RoomInvitePanel from "./RoomInvitePanel"
 import { useMultiplayerRoom } from "@/hooks/useMultiplayerRoom"
 import { useBoardTheme } from "@/hooks/useBoardTheme"
 import type { BoardThemeId } from "@/lib/chess/board-themes"
@@ -51,6 +52,8 @@ export default function MultiplayerRoomView({ roomId }: MultiplayerRoomViewProps
   const copyLink = () => {
     navigator.clipboard.writeText(inviteLink)
   }
+
+  const canInvite = !full && waiting
 
   const handleMove = (from: string, to: string, promotion?: string) => {
     if (!canMove) return false
@@ -128,6 +131,8 @@ export default function MultiplayerRoomView({ roomId }: MultiplayerRoomViewProps
             )}
             <p className="text-[#aaa]">Players: {room?.players.filter((p) => p.connected).length ?? 0}/2</p>
           </div>
+
+          <RoomInvitePanel roomId={roomId} inviteLink={inviteLink} disabled={!canInvite} />
 
           <div className="border-b border-[#403d39] shrink-0">
             <button
