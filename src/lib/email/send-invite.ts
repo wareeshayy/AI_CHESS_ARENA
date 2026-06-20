@@ -23,6 +23,11 @@ function getFromAddress(fromName?: string): string {
   return `${name} <${raw}>`
 }
 
+function isResendTestFromAddress(): boolean {
+  const from = process.env.EMAIL_FROM ?? "onboarding@resend.dev"
+  return from.includes("resend.dev")
+}
+
 async function sendViaGmail(params: InviteEmailParams): Promise<SendInviteResult> {
   const user = process.env.SMTP_USER ?? process.env.GMAIL_USER
   const pass = process.env.SMTP_PASS ?? process.env.GMAIL_APP_PASSWORD
@@ -32,6 +37,7 @@ async function sendViaGmail(params: InviteEmailParams): Promise<SendInviteResult
 
   const nodemailer = await import("nodemailer")
   const fromName = params.fromName ?? process.env.EMAIL_FROM_NAME ?? "AI Chess Arena"
+  const fromEmail = user.includes("@") ? user : getFromAddress(fromName)
 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST ?? "smtp.gmail.com",
@@ -41,7 +47,7 @@ async function sendViaGmail(params: InviteEmailParams): Promise<SendInviteResult
   })
 
   await transporter.sendMail({
-    from: getFromAddress(fromName),
+    from: fromEmail.includes("<") ? fromEmail : `${fromName} <${fromEmail}>`,
     to: params.to.trim(),
     subject: buildInviteSubject(),
     html: buildInviteHtml({ ...params, fromName }),
@@ -97,11 +103,7 @@ async function sendViaResend(params: InviteEmailParams): Promise<SendInviteResul
 
   if (error) {
     if (isResendTestingLimitError(error.message)) {
-      return {
-        ok: false,
-        error:
-          "Resend test mode only emails your account address. Add GMAIL_USER and GMAIL_APP_PASSWORD on Vercel to auto-send invites to anyone.",
-      }
+      return { ok: false, error: "resend_test_mode" }
     }
     return { ok: false, error: error.message }
   }
@@ -127,38 +129,32 @@ export async function sendInviteEmail(params: InviteEmailParams): Promise<SendIn
     }
   }
 
-  if (hasResend) {
+  if (hasResend && !isResendTestFromAddress()) {
+    const result = await sendViaResend(params)
+    if (result.ok) return result
+    if (result.error !== "resend_test_mode") return result
+  }
+
+  if (hasResend && isResendTestFromAddress()) {
     const sdkResult = await sendViaResend(params)
     if (sdkResult.ok) return sdkResult
 
-    if (!isResendTestingLimitError(sdkResult.error)) {
+    if (sdkResult.error !== "resend_test_mode") {
       return sdkResult
     }
 
-    try {
-      const smtpResult = await sendViaResendSmtp(params)
-      if (smtpResult.ok) return smtpResult
-    } catch (err) {
-      console.warn("Resend SMTP send failed:", err)
-    }
-
     if (hasGmail && hasGmailPass) {
-      return {
-        ok: false,
-        error: "Could not send invite. Check Gmail app password on Vercel.",
-      }
+      return { ok: false, error: "Could not send invite email. Check Gmail app password on Vercel." }
     }
-
-    return sdkResult
   }
 
   if (hasGmail && !hasGmailPass) {
-    return { ok: false, error: "GMAIL_APP_PASSWORD is missing on the server." }
+    return { ok: false, error: "Gmail app password is not configured on the server." }
   }
 
-  return {
-    ok: false,
-    error:
-      "Email not configured. Add GMAIL_USER + GMAIL_APP_PASSWORD (recommended) or RESEND_API_KEY on Vercel.",
+  if (hasResend) {
+    return { ok: false, error: "Could not send invite email." }
   }
+
+  return { ok: false, error: "Email service is not configured." }
 }
