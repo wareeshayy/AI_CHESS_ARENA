@@ -5,6 +5,7 @@
 A web-based chess platform built with **Next.js** where users play against an AI opponent powered by **LLM tool calling**. The AI explains moves, suggests strategies, analyzes positions, and adapts to difficulty level.
 
 **Repository:** [github.com/wareeshayy/AI_CHESS_ARENA](https://github.com/wareeshayy/AI_CHESS_ARENA)
+**Live:** [ai_chess_arena](https://ai-chess-arena-xi.vercel.app/)
 
 ## Features
 
