@@ -40,22 +40,23 @@ async function getCollection() {
 }
 
 export async function getRoom(roomId: string): Promise<MultiplayerRoom | null> {
-  const normalized = roomId.toLowerCase()
-  const mem = memoryRooms.get(normalized)
-  if (mem) return mem
+  const normalized = roomId.toLowerCase().trim()
 
+  // Serverless: memory is per-instance — always read MongoDB first
   try {
     const col = await getCollection()
-    if (!col) return memoryRooms.get(normalized) ?? null
-    const doc = await col.findOne({ roomId: normalized })
-    if (doc) {
-      memoryRooms.set(normalized, doc)
-      return doc
+    if (col) {
+      const doc = await col.findOne({ roomId: normalized })
+      if (doc) {
+        memoryRooms.set(normalized, doc)
+        return doc
+      }
     }
   } catch (err) {
     console.warn("MongoDB getRoom failed:", err)
   }
-  return null
+
+  return memoryRooms.get(normalized) ?? null
 }
 
 async function saveRoom(room: MultiplayerRoom): Promise<MultiplayerRoom> {
@@ -63,14 +64,26 @@ async function saveRoom(room: MultiplayerRoom): Promise<MultiplayerRoom> {
   room.version += 1
   memoryRooms.set(room.roomId, room)
 
-  try {
-    const col = await getCollection()
-    if (col) {
+  const col = await getCollection()
+  if (col) {
+    try {
       await col.updateOne({ roomId: room.roomId }, { $set: room }, { upsert: true })
+      return room
+    } catch (err) {
+      console.error("MongoDB saveRoom failed:", err)
+      if (process.env.VERCEL) {
+        throw new Error(
+          "Could not save room — check MONGODB_URI on Vercel (Network Access must allow 0.0.0.0/0).",
+        )
+      }
+      throw err
     }
-  } catch (err) {
-    console.warn("MongoDB saveRoom failed:", err)
   }
+
+  if (process.env.VERCEL) {
+    throw new Error("MongoDB is required for multiplayer on Vercel. Set MONGODB_URI in env vars.")
+  }
+
   return room
 }
 

@@ -75,7 +75,7 @@ export default function RoomInvitePanel({ roomId, inviteLink, disabled }: RoomIn
         window.location.href = data.mailtoUrl as string
         setFeedback({
           type: "info",
-          text: "Auto-send needs a verified domain on Resend. Your email app opened — send the invite from there, or copy the link below.",
+          text: "Your email app opened — send the invite from there, or copy the link below.",
         })
         return
       }
@@ -96,10 +96,6 @@ export default function RoomInvitePanel({ roomId, inviteLink, disabled }: RoomIn
     <div className="shrink-0 px-3 py-3 border-b border-[#403d39] space-y-2">
       <p className="text-[10px] uppercase tracking-wider text-[#888] font-semibold">
         Invite a friend
-      </p>
-      <p className="text-[10px] text-[#777] leading-snug">
-        Auto-email works for any address after you verify a domain on Resend. Until then, use{" "}
-        <strong className="text-[#aaa]">Email app</strong> or <strong className="text-[#aaa]">Copy link</strong>.
       </p>
 
       <input

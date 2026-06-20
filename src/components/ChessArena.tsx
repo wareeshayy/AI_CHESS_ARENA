@@ -5,7 +5,10 @@ import { Chess } from "chess.js"
 import ChessBoardPanel from "./ChessBoardPanel"
 import CoachPanel, { type CoachMessage } from "./CoachPanel"
 import AppNavSidebar from "./AppNavSidebar"
-import AppMobileNav from "./AppMobileNav"
+import MobileGameActionBar, { ActionIcons } from "./MobileGameActionBar"
+import MobileCoachStrip from "./MobileCoachStrip"
+import MobileMoveStrip from "./MobileMoveStrip"
+import MobileOptionsPanel from "./MobileOptionsPanel"
 import BoardStage from "./BoardStage"
 import PlayerBar from "./PlayerBar"
 import { useCoachSpeech } from "@/hooks/useCoachSpeech"
@@ -459,6 +462,13 @@ export default function ChessArena() {
             materialAdvantage={topPlayer.isAI ? aiAdv : playerAdv}
           />
 
+          <MobileCoachStrip
+            coachName={coachName}
+            coachRating={COACH_RATINGS[personality]}
+            messages={coachMessages}
+            isThinking={aiThinking || chatLoading}
+          />
+
           <BoardStage loading={loading}>
             <ChessBoardPanel
               fen={fen}
@@ -473,6 +483,14 @@ export default function ChessArena() {
             />
           </BoardStage>
 
+          <MobileMoveStrip
+            moves={game?.moves.map((m) => ({ san: m.san })) ?? []}
+            currentMoveIndex={viewIndex}
+            onMoveClick={navigateMove}
+            onPrev={() => navigateMove(viewIndex - 1)}
+            onNext={() => navigateMove(viewIndex + 1)}
+          />
+
           <PlayerBar
             compact
             name={bottomPlayer.name}
@@ -484,18 +502,10 @@ export default function ChessArena() {
             capturedPieceColor={bottomPlayer.isAI ? playerColor : aiColor}
             materialAdvantage={bottomPlayer.isAI ? aiAdv : playerAdv}
           />
-
-          <button
-            type="button"
-            onClick={() => setMobilePanel(true)}
-            className="lg:hidden shrink-0 mt-1 py-2.5 bg-[#403d39] hover:bg-[#4a4744] rounded-lg text-xs font-bold text-[#ccc]"
-          >
-            Coach &amp; options
-          </button>
         </div>
 
         <aside
-          className={`min-h-0 overflow-hidden border-[#403d39] ${
+          className={`bg-[#262421] flex flex-col min-h-0 overflow-hidden border-[#403d39] ${
             mobilePanel
               ? "flex flex-1 w-full lg:w-[min(300px,30vw)] lg:shrink-0 lg:border-l"
               : "hidden lg:flex lg:w-[min(300px,30vw)] lg:shrink-0 lg:border-l"
@@ -508,6 +518,33 @@ export default function ChessArena() {
           >
             ← Back to board
           </button>
+
+          <div className="lg:hidden flex flex-col flex-1 min-h-0">
+            <MobileOptionsPanel
+              boardTheme={boardTheme}
+              onBoardThemeChange={setBoardTheme}
+              moves={
+                game?.moves.map((m) => ({
+                  san: m.san,
+                  timeSpent: m.timeSpent,
+                  evaluation: m.evaluation,
+                })) ?? []
+              }
+              currentMoveIndex={viewIndex}
+              onMoveClick={navigateMove}
+              showAnalysis={showAnalysis}
+              isPlaying={isPlaying}
+              onFirst={() => navigateMove(-1)}
+              onPrev={() => navigateMove(viewIndex - 1)}
+              onPlayPause={handlePlayPause}
+              onNext={() => navigateMove(viewIndex + 1)}
+              onLast={() => navigateMove((game?.moves.length ?? 1) - 1)}
+              onFlip={() => setOrientation((o) => (o === "white" ? "black" : "white"))}
+              onFullReplay={startFullReplay}
+            />
+          </div>
+
+          <div className="hidden lg:flex flex-col flex-1 min-h-0">
           <CoachPanel
             coachName={coachName}
             coachRating={COACH_RATINGS[personality]}
@@ -550,10 +587,40 @@ export default function ChessArena() {
               onBoardThemeChange: setBoardTheme,
             }}
           />
+          </div>
         </aside>
       </div>
 
-      <AppMobileNav active="play" />
+      <MobileGameActionBar
+        items={[
+          {
+            id: "options",
+            label: "Options",
+            icon: ActionIcons.options,
+            onClick: () => setMobilePanel(true),
+          },
+          {
+            id: "resign",
+            label: "Resign",
+            icon: ActionIcons.resign,
+            onClick: handleResign,
+            disabled: !game || !!gameOverMessage,
+          },
+          {
+            id: "hint",
+            label: "Hint",
+            icon: ActionIcons.hint,
+            onClick: handleHint,
+            disabled: !canPlayerMove || aiThinking,
+          },
+          {
+            id: "flip",
+            label: "Flip",
+            icon: ActionIcons.flip,
+            onClick: () => setOrientation((o) => (o === "white" ? "black" : "white")),
+          },
+        ]}
+      />
     </div>
   )
 }
