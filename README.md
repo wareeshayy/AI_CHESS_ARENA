@@ -1,36 +1,94 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Chess Arena
+
+[![CI](https://github.com/wareeshayy/AI_CHESS_ARENA/actions/workflows/ci.yml/badge.svg)](https://github.com/wareeshayy/AI_CHESS_ARENA/actions/workflows/ci.yml)
+
+A web-based chess platform built with **Next.js** where users play against an AI opponent powered by **LLM tool calling**. The AI explains moves, suggests strategies, analyzes positions, and adapts to difficulty level.
+
+**Repository:** [github.com/wareeshayy/AI_CHESS_ARENA](https://github.com/wareeshayy/AI_CHESS_ARENA)
+
+## Features
+
+- **AI Chess Opponent** — Play vs AI with engine-backed move selection
+- **Move Explanation** — Ask "Why did you move the knight?" in the Chat tab
+- **Dynamic Difficulty** — Beginner, Intermediate, Advanced
+- **Position Analysis** — Best move, hints, evaluation via tool calling
+- **Post-Game Review** — Blunders, missed opportunities, best moves
+- **Lichess-style Move List** — Two-column notation with piece icons and evaluation bar
+- **Playback Controls** — Navigate, auto-play, flip board
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js, React, Tailwind CSS, react-chessboard |
+| Backend | Next.js API Routes |
+| AI | OpenAI with Tool Calling |
+| Engine | Minimax analyzer (Stockfish-style) |
+| Database | MongoDB Atlas (optional) |
+| Deploy | Vercel |
+
+## Tool Calling Architecture
+
+| Tool | Purpose |
+|------|---------|
+| `legal_move_validator` | Validate moves via chess.js |
+| `board_analyzer` | Evaluate positions, find best move |
+| `game_history` | Retrieve previous moves |
+| `hint_generator` | Strategic hints without revealing moves |
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
+cp .env.example .env.local   # optional: add OPENAI_API_KEY
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Works without API keys — the engine fallback handles AI moves and chat.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment Variables
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENAI_API_KEY` | No | Enables LLM-powered explanations and reviews |
+| `OPENAI_MODEL` | No | Default: `gpt-4o-mini` |
+| `MONGODB_URI` | No | Persists games to MongoDB Atlas |
+| `MONGODB_DB` | No | Database name (default: `chess_arena`) |
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Option A — GitHub integration (recommended)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push this repo to [AI_CHESS_ARENA](https://github.com/wareeshayy/AI_CHESS_ARENA)
+2. Import the project in [Vercel](https://vercel.com/new)
+3. Connect the GitHub repo — Vercel auto-deploys on every push to `main`
+4. Add environment variables in the Vercel dashboard
+
+### Option B — GitHub Actions deploy workflow
+
+The repo includes `.github/workflows/deploy.yml`. Add these repository secrets in GitHub → Settings → Secrets and variables → Actions:
+
+| Secret | Description |
+|--------|-------------|
+| `VERCEL_TOKEN` | From [Vercel account tokens](https://vercel.com/account/tokens) |
+| `VERCEL_ORG_ID` | From `.vercel/project.json` after `vercel link` |
+| `VERCEL_PROJECT_ID` | From `.vercel/project.json` after `vercel link` |
+
+CI runs on every push and pull request via `.github/workflows/ci.yml` (lint + build).
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── api/          # game, move, chat, analyze, review, ai-move
+│   └── page.tsx      # Main arena
+├── components/       # ChessArena, MoveList, GameSidebar, etc.
+└── lib/
+    ├── ai/           # LLM + tool calling
+    ├── chess/        # validator, analyzer, hints, notation
+    ├── db/           # MongoDB
+    └── types/        # TypeScript types
+```

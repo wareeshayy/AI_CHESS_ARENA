@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256">
+  <defs>
+    <linearGradient id="base" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ae8058"/>
+      <stop offset="40%" stop-color="#b58863"/>
+      <stop offset="70%" stop-color="#a87a55"/>
+      <stop offset="100%" stop-color="#ad835c"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" fill="url(#base)"/>
+  <g opacity="0.14">
+    <rect x="6" y="0" width="1.5" height="256" fill="#8a5e38"/>
+    <rect x="22" y="0" width="1" height="256" fill="#7a5230"/>
+    <rect x="38" y="0" width="2" height="256" fill="#966842"/>
+    <rect x="56" y="0" width="1" height="256" fill="#845630"/>
+    <rect x="72" y="0" width="1.5" height="256" fill="#9a7048"/>
+    <rect x="90" y="0" width="1" height="256" fill="#7e5634"/>
+    <rect x="106" y="0" width="2" height="256" fill="#a07850"/>
+    <rect x="125" y="0" width="1" height="256" fill="#865a3a"/>
+    <rect x="142" y="0" width="1.5" height="256" fill="#946640"/>
+    <rect x="160" y="0" width="1" height="256" fill="#7a4e2e"/>
+    <rect x="176" y="0" width="2" height="256" fill="#9c7246"/>
+    <rect x="195" y="0" width="1" height="256" fill="#865836"/>
+    <rect x="212" y="0" width="1.5" height="256" fill="#a07044"/>
+    <rect x="230" y="0" width="1" height="256" fill="#805430"/>
+    <rect x="246" y="0" width="2" height="256" fill="#926842"/>
+  </g>
+  <g opacity="0.06">
+    <rect x="0" y="30" width="256" height="4" fill="#000"/>
+    <rect x="0" y="110" width="256" height="3" fill="#000"/>
+    <rect x="0" y="190" width="256" height="4" fill="#000"/>
+  </g>
+</svg>
