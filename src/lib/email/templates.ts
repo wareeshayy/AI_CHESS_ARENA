@@ -25,6 +25,17 @@ export function buildInviteText({ inviteLink, message, fromName }: InviteEmailPa
   return lines.join("\n")
 }
 
+export function buildMailtoUrl(params: InviteEmailParams): string {
+  const to = params.to.trim()
+  const subject = encodeURIComponent(buildInviteSubject())
+  const body = encodeURIComponent(buildInviteText(params))
+  return `mailto:${to}?subject=${subject}&body=${body}`
+}
+
+export function isResendTestingLimitError(message: string): boolean {
+  return /testing emails|verify a domain|only send/i.test(message)
+}
+
 export function buildInviteHtml({ inviteLink, message, fromName }: InviteEmailParams): string {
   const intro = fromName
     ? `<strong>${escapeHtml(fromName)}</strong> invited you to play chess!`

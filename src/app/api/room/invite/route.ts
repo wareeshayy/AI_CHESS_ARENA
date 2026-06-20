@@ -62,7 +62,16 @@ export async function POST(request: NextRequest) {
     const result = await sendInviteEmail(params)
 
     if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: 502 })
+      return NextResponse.json(
+        {
+          ok: false,
+          error: result.error,
+          fallback: result.fallback,
+          mailtoUrl: result.mailtoUrl,
+          inviteLink,
+        },
+        { status: result.fallback === "mailto" ? 200 : 502 },
+      )
     }
 
     return NextResponse.json({ ok: true, message: "Invite sent!", inviteLink })

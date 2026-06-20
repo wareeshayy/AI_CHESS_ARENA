@@ -4,8 +4,14 @@ import {
   buildInviteHtml,
   buildInviteSubject,
   buildInviteText,
+  buildMailtoUrl,
+  isResendTestingLimitError,
   type InviteEmailParams,
 } from "./templates"
+
+export type SendInviteResult =
+  | { ok: true }
+  | { ok: false; error: string; fallback?: "mailto"; mailtoUrl?: string }
 
 function getFromAddress(fromName?: string): string {
   const raw = process.env.EMAIL_FROM ?? "onboarding@resend.dev"
@@ -14,9 +20,7 @@ function getFromAddress(fromName?: string): string {
   return `${name} <${raw}>`
 }
 
-export async function sendInviteEmail(
-  params: InviteEmailParams,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function sendInviteEmail(params: InviteEmailParams): Promise<SendInviteResult> {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) {
     return { ok: false, error: "RESEND_API_KEY missing — add it in Vercel env vars" }
@@ -34,6 +38,15 @@ export async function sendInviteEmail(
   })
 
   if (error) {
+    if (isResendTestingLimitError(error.message)) {
+      return {
+        ok: false,
+        error:
+          "Resend test mode: verify a domain at resend.com/domains to auto-send to anyone. Use your email app or copy the link instead.",
+        fallback: "mailto",
+        mailtoUrl: buildMailtoUrl({ ...params, fromName }),
+      }
+    }
     return { ok: false, error: error.message }
   }
 

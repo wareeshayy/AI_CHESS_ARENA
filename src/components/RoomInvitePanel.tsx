@@ -1,7 +1,8 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useState } from "react"
 import { isValidEmail } from "@/lib/email/validate"
+import { buildMailtoUrl } from "@/lib/email/templates"
 
 interface RoomInvitePanelProps {
   roomId: string
@@ -13,9 +14,25 @@ export default function RoomInvitePanel({ roomId, inviteLink, disabled }: RoomIn
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
   const [sending, setSending] = useState(false)
-  const [feedback, setFeedback] = useState<{ type: "ok" | "err"; text: string } | null>(null)
+  const [feedback, setFeedback] = useState<{ type: "ok" | "info" | "err"; text: string } | null>(null)
   const [copied, setCopied] = useState(false)
-  const lastSentRef = useRef("")
+
+  const mailtoParams = () => ({
+    to: email.trim(),
+    roomId,
+    inviteLink,
+    message: message.trim() || undefined,
+  })
+
+  const openEmailApp = useCallback(() => {
+    const trimmed = email.trim()
+    if (!trimmed || !isValidEmail(trimmed)) {
+      setFeedback({ type: "err", text: "Enter a valid email first" })
+      return
+    }
+    window.location.href = buildMailtoUrl(mailtoParams())
+    setFeedback({ type: "info", text: "Email app opened — tap Send to deliver the invite." })
+  }, [email, inviteLink, message, roomId])
 
   const copyLink = async () => {
     await navigator.clipboard.writeText(inviteLink)
@@ -49,34 +66,40 @@ export default function RoomInvitePanel({ roomId, inviteLink, disabled }: RoomIn
 
       const data = await res.json()
 
-      if (res.ok && data.ok) {
-        lastSentRef.current = trimmed
+      if (data.ok) {
         setFeedback({ type: "ok", text: `Invite sent to ${trimmed}!` })
+        return
+      }
+
+      if (data.fallback === "mailto" && data.mailtoUrl) {
+        window.location.href = data.mailtoUrl as string
+        setFeedback({
+          type: "info",
+          text: "Auto-send needs a verified domain on Resend. Your email app opened — send the invite from there, or copy the link below.",
+        })
         return
       }
 
       setFeedback({ type: "err", text: data.error ?? "Could not send invite" })
     } catch (err) {
-      const msg = err instanceof Error && err.name === "AbortError"
-        ? "Request timed out — try again"
-        : "Network error — try again"
+      const msg =
+        err instanceof Error && err.name === "AbortError"
+          ? "Request timed out — try Email app or Copy link"
+          : "Network error — try Email app or Copy link"
       setFeedback({ type: "err", text: msg })
     } finally {
       setSending(false)
     }
   }, [roomId, inviteLink, message, disabled, sending, email])
 
-  const handleEmailBlur = () => {
-    const trimmed = email.trim()
-    if (isValidEmail(trimmed) && trimmed !== lastSentRef.current && !disabled) {
-      void sendInvite()
-    }
-  }
-
   return (
     <div className="shrink-0 px-3 py-3 border-b border-[#403d39] space-y-2">
       <p className="text-[10px] uppercase tracking-wider text-[#888] font-semibold">
-        Invite a friend by email
+        Invite a friend
+      </p>
+      <p className="text-[10px] text-[#777] leading-snug">
+        Auto-email works for any address after you verify a domain on Resend. Until then, use{" "}
+        <strong className="text-[#aaa]">Email app</strong> or <strong className="text-[#aaa]">Copy link</strong>.
       </p>
 
       <input
@@ -86,7 +109,6 @@ export default function RoomInvitePanel({ roomId, inviteLink, disabled }: RoomIn
           setEmail(e.target.value)
           if (feedback) setFeedback(null)
         }}
-        onBlur={handleEmailBlur}
         onKeyDown={(e) => e.key === "Enter" && void sendInvite()}
         placeholder="friend@email.com"
         disabled={disabled || sending}
@@ -104,14 +126,22 @@ export default function RoomInvitePanel({ roomId, inviteLink, disabled }: RoomIn
         className="w-full bg-[#403d39] border border-[#5a5652] rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-[#777] focus:outline-none focus:border-[#81b64c] disabled:opacity-50"
       />
 
-      <div className="flex gap-1.5">
+      <div className="flex gap-1.5 flex-wrap">
         <button
           type="button"
           onClick={() => void sendInvite()}
           disabled={disabled || sending || !isValidEmail(email.trim())}
-          className="flex-1 py-2 bg-[#81b64c] hover:bg-[#9bc55c] disabled:opacity-50 rounded-lg text-[#262421] text-xs font-bold transition-colors"
+          className="flex-1 min-w-[100px] py-2 bg-[#81b64c] hover:bg-[#9bc55c] disabled:opacity-50 rounded-lg text-[#262421] text-xs font-bold transition-colors"
         >
-          {sending ? "Sending…" : "Send invite"}
+          {sending ? "Sending…" : "Auto send"}
+        </button>
+        <button
+          type="button"
+          onClick={openEmailApp}
+          disabled={disabled || !isValidEmail(email.trim())}
+          className="flex-1 min-w-[100px] py-2 bg-[#369] hover:bg-[#4a8] disabled:opacity-50 rounded-lg text-white text-xs font-bold transition-colors"
+        >
+          Email app
         </button>
         <button
           type="button"
@@ -123,7 +153,15 @@ export default function RoomInvitePanel({ roomId, inviteLink, disabled }: RoomIn
       </div>
 
       {feedback && (
-        <p className={`text-[11px] ${feedback.type === "ok" ? "text-[#81b64c]" : "text-red-400"}`}>
+        <p
+          className={`text-[11px] leading-snug ${
+            feedback.type === "ok"
+              ? "text-[#81b64c]"
+              : feedback.type === "info"
+                ? "text-[#aaa]"
+                : "text-red-400"
+          }`}
+        >
           {feedback.text}
         </p>
       )}
