@@ -40,7 +40,7 @@ A web-based chess platform built with **Next.js** where users play against an AI
 
 ```bash
 npm install
-cp .env.example .env.local   # optional: add OPENAI_API_KEY
+cp .env.example .env.local   # add a FREE Groq or Gemini key
 npm run dev
 ```
 
@@ -52,7 +52,12 @@ Works without API keys — the engine fallback handles AI moves and chat.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `OPENAI_API_KEY` | No | Enables LLM-powered explanations and reviews |
+| `GROQ_API_KEY` | No | **Free** AI chat & reviews ([Groq console](https://console.groq.com/keys)) |
+| `GEMINI_API_KEY` | No | **Free** alternative ([Google AI Studio](https://aistudio.google.com/apikey)) |
+| `AI_PROVIDER` | No | `auto` (default), `groq`, `gemini`, or `openai` |
+| `GROQ_MODEL` | No | Default: `llama-3.3-70b-versatile` |
+| `GEMINI_MODEL` | No | Default: `gemini-2.0-flash` |
+| `OPENAI_API_KEY` | No | Paid — enables OpenAI (requires billing credits) |
 | `OPENAI_MODEL` | No | Default: `gpt-4o-mini` |
 | `MONGODB_URI` | No | Persists games to MongoDB Atlas |
 | `MONGODB_DB` | No | Database name (default: `chess_arena`) |

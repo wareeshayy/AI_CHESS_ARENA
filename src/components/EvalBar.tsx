@@ -5,24 +5,36 @@ import type { MoveQuality } from "@/lib/ai/coach"
 interface EvalBarProps {
   evaluation: number
   orientation: "white" | "black"
+  evalLight?: string
+  evalDark?: string
+  borderColor?: string
 }
 
-export function EvalBar({ evaluation, orientation }: EvalBarProps) {
+export function EvalBar({
+  evaluation,
+  orientation,
+  evalLight = "#eeeed2",
+  evalDark = "#b58863",
+  borderColor = "#211f1c",
+}: EvalBarProps) {
   const clamped = Math.max(-8, Math.min(8, evaluation))
   const whitePct = 50 + (clamped / 8) * 50
   const whiteOnTop = orientation === "white"
 
   return (
-    <div className="w-5 shrink-0 overflow-hidden self-stretch min-h-[200px] flex flex-col border border-[#211f1c] border-r-0">
+    <div
+      className="w-5 shrink-0 overflow-hidden self-stretch min-h-[200px] flex flex-col border border-r-0"
+      style={{ borderColor }}
+    >
       {whiteOnTop ? (
         <>
-          <div className="bg-[#eeeed2] transition-all duration-500" style={{ flex: whitePct }} />
-          <div className="bg-[#b58863] transition-all duration-500" style={{ flex: 100 - whitePct }} />
+          <div className="transition-all duration-500" style={{ flex: whitePct, backgroundColor: evalLight }} />
+          <div className="transition-all duration-500" style={{ flex: 100 - whitePct, backgroundColor: evalDark }} />
         </>
       ) : (
         <>
-          <div className="bg-[#b58863] transition-all duration-500" style={{ flex: 100 - whitePct }} />
-          <div className="bg-[#eeeed2] transition-all duration-500" style={{ flex: whitePct }} />
+          <div className="transition-all duration-500" style={{ flex: 100 - whitePct, backgroundColor: evalDark }} />
+          <div className="transition-all duration-500" style={{ flex: whitePct, backgroundColor: evalLight }} />
         </>
       )}
     </div>

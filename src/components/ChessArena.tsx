@@ -4,9 +4,11 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import { Chess } from "chess.js"
 import ChessBoardPanel from "./ChessBoardPanel"
 import CoachPanel, { type CoachMessage } from "./CoachPanel"
+import BoardThemePicker from "./BoardThemePicker"
 import PlayerBar from "./PlayerBar"
 import { CapturedSideBySide } from "./ChessPieces"
 import { useCoachSpeech } from "@/hooks/useCoachSpeech"
+import { useBoardTheme } from "@/hooks/useBoardTheme"
 import {
   getWelcomeMessage,
   getCoachFeedbackAfterPlayerMove,
@@ -57,6 +59,8 @@ export default function ChessArena() {
   const [loading, setLoading] = useState(true)
   const [coachMessages, setCoachMessages] = useState<CoachMessage[]>([])
   const { speechEnabled, speak, toggleSpeech } = useCoachSpeech(true)
+  const { themeId: boardTheme, setThemeId: setBoardTheme } = useBoardTheme()
+  const [chatLoading, setChatLoading] = useState(false)
   const playInterval = useRef<ReturnType<typeof setInterval> | null>(null)
   const gameInitRef = useRef(0)
 
@@ -309,6 +313,60 @@ export default function ChessArena() {
     addCoachTip(getHintMessage(game.fen))
   }
 
+  const handleAskCoach = useCallback(
+    async (message: string) => {
+      if (!game) return
+      setCoachMessages((prev) => [
+        ...prev,
+        { role: "user", content: message, timestamp: Date.now() },
+      ])
+      setChatLoading(true)
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gameId: game.id, message }),
+        })
+        const data = await res.json()
+        if (data.reply) {
+          setCoachMessages((prev) => [
+            ...prev,
+            { role: "coach", content: data.reply, timestamp: Date.now(), sentiment: "tip" },
+          ])
+          speak(data.reply)
+        }
+      } catch {
+        addCoachTip({ text: "Could not reach the coach. Try again.", sentiment: "tip" }, false)
+      } finally {
+        setChatLoading(false)
+      }
+    },
+    [game, speak, addCoachTip],
+  )
+
+  const handleExplain = useCallback(
+    async (focus: "position" | "best-move" | "last-move") => {
+      if (!game) return
+      setChatLoading(true)
+      try {
+        const res = await fetch("/api/explain", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gameId: game.id, focus }),
+        })
+        const data = await res.json()
+        if (data.explanation) {
+          addCoachTip({ text: data.explanation, sentiment: "tip" })
+        }
+      } catch {
+        addCoachTip({ text: "Analysis unavailable right now.", sentiment: "tip" }, false)
+      } finally {
+        setChatLoading(false)
+      }
+    },
+    [game, addCoachTip],
+  )
+
   const handleResign = () => {
     if (!game || game.status !== "active") return
     addCoachTip({ text: "You resigned. Start a new game when ready.", sentiment: "tip" })
@@ -468,11 +526,15 @@ export default function ChessArena() {
                 <div className="text-[#81b64c] animate-pulse font-semibold">Setting up game...</div>
               </div>
             )}
+            <div className="mb-2">
+              <BoardThemePicker value={boardTheme} onChange={setBoardTheme} />
+            </div>
             <ChessBoardPanel
               fen={fen}
               orientation={orientation}
               canMove={canPlayerMove}
               playerColor={playerColor}
+              boardTheme={boardTheme}
               onMove={handleMove}
               lastMove={lastMove}
               evaluation={currentEval}
@@ -533,6 +595,9 @@ export default function ChessArena() {
             isThinking={aiThinking}
             speechEnabled={speechEnabled}
             onToggleSpeech={toggleSpeech}
+            onAskCoach={handleAskCoach}
+            onExplain={handleExplain}
+            chatLoading={chatLoading}
             moves={game?.moves.map((m) => ({
               san: m.san,
               timeSpent: m.timeSpent,

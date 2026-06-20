@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useState } from "react"
 import MoveList from "./MoveList"
 import PlaybackControls from "./PlaybackControls"
 import type { CoachSentiment, MoveQuality } from "@/lib/ai/coach"
@@ -23,6 +23,9 @@ interface CoachPanelProps {
   isThinking: boolean
   speechEnabled: boolean
   onToggleSpeech: () => void
+  onAskCoach?: (message: string) => void
+  onExplain?: (focus: "position" | "best-move" | "last-move") => void
+  chatLoading?: boolean
   moves: { san: string; timeSpent?: number; evaluation?: number }[]
   currentMoveIndex: number
   onMoveClick: (index: number) => void
@@ -46,6 +49,9 @@ export default function CoachPanel({
   isThinking,
   speechEnabled,
   onToggleSpeech,
+  onAskCoach,
+  onExplain,
+  chatLoading = false,
   moves,
   currentMoveIndex,
   onMoveClick,
@@ -62,10 +68,18 @@ export default function CoachPanel({
   onFullReplay,
 }: CoachPanelProps) {
   const chatEndRef = useRef<HTMLDivElement>(null)
+  const [chatInput, setChatInput] = useState("")
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages, isThinking])
+  }, [messages, isThinking, chatLoading])
+
+  const submitChat = () => {
+    const text = chatInput.trim()
+    if (!text || !onAskCoach || chatLoading) return
+    onAskCoach(text)
+    setChatInput("")
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#262421] text-[#ebebeb] rounded overflow-hidden border border-[#403d39]">
@@ -134,8 +148,59 @@ export default function CoachPanel({
             </div>
           </div>
         )}
+        {chatLoading && (
+          <div className="flex items-center gap-2 pl-14 text-xs text-[#888]">
+            Coach is thinking...
+          </div>
+        )}
         <div ref={chatEndRef} />
       </div>
+
+      {/* AI quick actions (Groq) */}
+      {onExplain && (
+        <div className="px-3 py-2 border-t border-[#403d39] flex flex-wrap gap-1.5 shrink-0">
+          {(
+            [
+              ["position", "Explain position"],
+              ["best-move", "Best move"],
+              ["last-move", "Last move"],
+            ] as const
+          ).map(([focus, label]) => (
+            <button
+              key={focus}
+              type="button"
+              disabled={chatLoading}
+              onClick={() => onExplain(focus)}
+              className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[#403d39] hover:bg-[#4a4744] text-[#ccc] hover:text-white disabled:opacity-50 transition-colors"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Ask coach chat */}
+      {onAskCoach && (
+        <div className="px-3 py-2 border-t border-[#403d39] flex gap-2 shrink-0">
+          <input
+            type="text"
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submitChat()}
+            placeholder="Ask your coach..."
+            disabled={chatLoading}
+            className="flex-1 bg-[#403d39] border border-[#5a5652] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#777] focus:outline-none focus:border-[#81b64c]"
+          />
+          <button
+            type="button"
+            onClick={submitChat}
+            disabled={chatLoading || !chatInput.trim()}
+            className="px-3 py-2 bg-[#81b64c] hover:bg-[#9bc55c] disabled:opacity-50 rounded-lg text-[#262421] font-bold text-sm"
+          >
+            Ask
+          </button>
+        </div>
+      )}
 
       {/* Move list */}
       <div className="border-t border-[#403d39] max-h-[180px] flex flex-col min-h-0 shrink-0">

@@ -8,16 +8,11 @@ import { neoPieces, NeoPieceImg } from "./NeoPieces"
 import { EvalBar, MoveQualityBadge } from "./EvalBar"
 import type { MoveQuality } from "@/lib/ai/coach"
 import {
-  CHESS_THEME,
-  SQUARE_TRANSPARENT,
-  BOARD_FRAME_STYLE,
-  NOTATION_LIGHT,
-  NOTATION_DARK,
-  NOTATION_ALPHA,
-  NOTATION_NUMERIC,
+  getThemeStyles,
   squareHighlight,
   squareDot,
-} from "@/lib/chess/theme"
+  type BoardThemeId,
+} from "@/lib/chess/board-themes"
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -26,6 +21,7 @@ interface ChessBoardPanelProps {
   orientation: "white" | "black"
   canMove: boolean
   playerColor: "w" | "b"
+  boardTheme?: BoardThemeId
   onMove: (from: string, to: string, promotion?: string) => boolean
   lastMove?: { from: string; to: string }
   evaluation?: number
@@ -38,6 +34,7 @@ export default function ChessBoardPanel({
   orientation,
   canMove,
   playerColor,
+  boardTheme = "classic-wood",
   onMove,
   lastMove,
   evaluation = 0,
@@ -46,6 +43,8 @@ export default function ChessBoardPanel({
 }: ChessBoardPanelProps) {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
   const [promotionPending, setPromotionPending] = useState<{ from: string; to: string } | null>(null)
+
+  const styles = useMemo(() => getThemeStyles(boardTheme), [boardTheme])
 
   const positionFen = fen === "start" ? START_FEN : fen
 
@@ -85,22 +84,22 @@ export default function ChessBoardPanel({
   }, [hintArrow])
 
   const squareStyles = useMemo(() => {
-    const styles: Record<string, React.CSSProperties> = {}
+    const result: Record<string, React.CSSProperties> = {}
 
     if (lastMove) {
-      styles[lastMove.from] = squareHighlight(CHESS_THEME.lastMove)
-      styles[lastMove.to] = squareHighlight(CHESS_THEME.lastMove)
+      result[lastMove.from] = squareHighlight(styles.lastMove)
+      result[lastMove.to] = squareHighlight(styles.lastMove)
     }
-    if (selectedSquare) styles[selectedSquare] = squareHighlight(CHESS_THEME.selected)
-    if (kingInCheckSquare) styles[kingInCheckSquare] = { background: CHESS_THEME.check }
+    if (selectedSquare) result[selectedSquare] = squareHighlight(styles.selected)
+    if (kingInCheckSquare) result[kingInCheckSquare] = { background: styles.check }
 
     legalTargets.forEach((sq) => {
       const isCapture = legalMoves.some((m) => m.from === selectedSquare && m.to === sq && m.captured)
-      styles[sq] = { ...styles[sq], ...squareDot(isCapture) }
+      result[sq] = { ...result[sq], ...squareDot(isCapture) }
     })
 
-    return styles
-  }, [lastMove, selectedSquare, legalTargets, legalMoves, kingInCheckSquare])
+    return result
+  }, [lastMove, selectedSquare, legalTargets, legalMoves, kingInCheckSquare, styles])
 
   const tryMove = useCallback(
     (from: string, to: string, promotion?: string): boolean => {
@@ -148,7 +147,13 @@ export default function ChessBoardPanel({
 
   return (
     <div className="flex items-stretch w-full max-w-[min(100vw-2rem,640px)]">
-      <EvalBar evaluation={evalForBar} orientation={orientation} />
+      <EvalBar
+        evaluation={evalForBar}
+        orientation={orientation}
+        evalLight={styles.evalLight}
+        evalDark={styles.evalDark}
+        borderColor={styles.boardBorder}
+      />
 
       <div className="relative flex-1 aspect-square">
         <Chessboard
@@ -165,14 +170,14 @@ export default function ChessBoardPanel({
             showNotation: true,
             squareStyles,
             arrows,
-            squareStyle: SQUARE_TRANSPARENT,
-            darkSquareStyle: SQUARE_TRANSPARENT,
-            lightSquareStyle: SQUARE_TRANSPARENT,
-            darkSquareNotationStyle: NOTATION_DARK,
-            lightSquareNotationStyle: NOTATION_LIGHT,
-            alphaNotationStyle: NOTATION_ALPHA,
-            numericNotationStyle: NOTATION_NUMERIC,
-            boardStyle: BOARD_FRAME_STYLE,
+            squareStyle: styles.squareTransparent,
+            darkSquareStyle: styles.squareTransparent,
+            lightSquareStyle: styles.squareTransparent,
+            darkSquareNotationStyle: styles.notationDark,
+            lightSquareNotationStyle: styles.notationLight,
+            alphaNotationStyle: { ...styles.notationLight, ...styles.notationAlpha },
+            numericNotationStyle: { ...styles.notationLight, ...styles.notationNumeric },
+            boardStyle: styles.boardFrameStyle,
           }}
         />
 
