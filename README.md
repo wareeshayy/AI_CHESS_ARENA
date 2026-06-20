@@ -6,7 +6,7 @@ A web-based chess platform built with **Next.js** where users play against an AI
 
 **Repository:** [github.com/wareeshayy/AI_CHESS_ARENA](https://github.com/wareeshayy/AI_CHESS_ARENA)
 
-**Live:** [chess-coral-one.vercel.app](https://ai-chess-arena-xi.vercel.app/)
+**Live:** [ai-chess-arena.vercel.app](https://ai-chess-arena-xi.vercel.app/)
 
 ## Features
 
