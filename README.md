@@ -11,7 +11,7 @@ A web-based chess platform built with **Next.js** where users play against an AI
 ## Features
 
 - **Coach David** — Plain-language move feedback with Neo piece icons (no Nf3 or Bxe5)
-- **AI Opponent** — Engine-backed moves with Groq/Gemini chat (free tier supported)
+- **AI Opponent** — Engine-backed moves with AI chat (free tier supported)
 - **Multiplayer Rooms** — Create a room, share a link or email invite, play 2-player chess
 - **Board Themes** — Wood, green, marble, glass, and more
 - **Move List** — Piece icons + human-readable labels and evaluation bar
@@ -23,7 +23,7 @@ A web-based chess platform built with **Next.js** where users play against an AI
 |-------|-----------|
 | Frontend | Next.js, React, Tailwind CSS, react-chessboard |
 | Backend | Next.js API Routes, Socket.io (local dev) |
-| AI | Groq / Gemini / OpenAI with tool calling |
+| AI |  LLM with tool calling |
 | Engine | Minimax analyzer |
 | Database | MongoDB Atlas (optional) |
 | Email | Resend (optional, for room invites) |
@@ -33,7 +33,6 @@ A web-based chess platform built with **Next.js** where users play against an AI
 
 ```bash
 npm install
-cp .env.example .env.local   # add a FREE Groq or Gemini key
 npm run dev                  # includes Socket.io for multiplayer
 ```
 
