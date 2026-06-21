@@ -1,4 +1,4 @@
-# AI Chess Arena
+# AI Chess Arena 
 
 [![CI](https://github.com/wareeshayy/AI_CHESS_ARENA/actions/workflows/ci.yml/badge.svg)](https://github.com/wareeshayy/AI_CHESS_ARENA/actions/workflows/ci.yml)
 
