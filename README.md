@@ -38,7 +38,7 @@ npm run dev                  # includes Socket.io for multiplayer
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Works without API keys — the engine fallback handles AI moves and coaching.
+Works with — the engine fallback handles AI moves and coaching.
 
 See `.env.example` for all optional configuration (AI keys, MongoDB, Resend email).
 
